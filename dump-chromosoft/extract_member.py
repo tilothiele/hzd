@@ -4,6 +4,11 @@ import os
 
 load_dotenv()
 
+#
+# gibt eine Liste der Mitglieder aus.
+# die neuesten Mitglieder stehen oben.
+#
+
 input = os.getenv("MITGLIEDERLISTE_INPUT")
 # CSV einlesen (achte auf Encoding & Header ab zweiter Zeile)
 df = pd.read_csv(input, skipinitialspace=True)
@@ -21,6 +26,7 @@ spalten = [
     "city",
     "email",
     "membership number",
+    "membership status",
     "date of joining"
 ]
 df_filtered = df[spalten]

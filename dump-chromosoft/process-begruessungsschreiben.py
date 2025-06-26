@@ -2,6 +2,8 @@ import uno
 from dotenv import load_dotenv
 import os
 
+# 1. Test/Versuch, eine Vorlage über den uno-server in ein PDF zu wandeln.
+
 load_dotenv()
 
 localContext = uno.getComponentContext()
