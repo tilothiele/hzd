@@ -83,6 +83,40 @@ def check_member(dolibarr_user, row):
     print(dolibarr_membership, chromosoft_membership)
     #raise
 
+def typeid2type(typeid):
+    if typeid=="1":
+        return "OG-Mitglied"
+    if typeid=="2":
+        return "OG-Familienmitglied"
+    if typeid=="3":
+        return "HZD-Vollmitglied"
+    if typeid=="4":
+        return "HZD-Familienmitglied"
+    if typeid=="5":
+        return "Kurzmitglied"
+    return
+
+def dolibar_member(firstname, lastname, status, mitgliedsnr, email, typeid):
+    url = f"{host}/api/index.php/members"
+    headers = {
+        'DOLAPIKEY': api_key,
+        'Accept': 'application/json'
+    }
+
+    member = {
+        "firstname": firstname,
+        "lastname": lastname,
+        "status": 0,
+        "typeid": typeid,
+        "email": email
+    }
+    print('Mitglied anlegen', member)
+    response = requests.post(url, headers=headers, json=member)
+    if response.status_code == 200:
+        return
+    print(response.status_code, response.text)
+    return
+
 # Öffne die Datei mit UTF-8 und newline=""
 with open(filename, mode='r', encoding='utf-8', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
@@ -112,6 +146,8 @@ with open(filename, mode='r', encoding='utf-8', newline='') as csvfile:
              print(f" verarbeite {n} {og} {id} {mitgliedsnr} {firstname} {lastname} - {joined}")
              if is_og != 0:
                 n_oghh = n_oghh+1
+             else:
+                 dolibar_member(firstname, lastname, status, mitgliedsnr, email, 1)
         except:
             #print("fehler - nicht verarbeiten")
             continue
