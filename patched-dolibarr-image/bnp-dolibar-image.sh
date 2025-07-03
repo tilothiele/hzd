@@ -1,6 +1,8 @@
 #!/bin/bash
 
-IMG_NAME=tilothiele/dolibarr:21.0.1
+BASE_TAG=21.0.1
 
-docker build -t $IMG_NAME .
+IMG_NAME=tilothiele/dolibarr:$BASE_TAG
+
+docker build --build-arg BASE_TAG=$BASE_TAG -t $IMG_NAME .
 docker push $IMG_NAME
