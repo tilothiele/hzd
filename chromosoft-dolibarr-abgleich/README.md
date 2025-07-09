@@ -39,6 +39,12 @@ Familienmitglied
 
 ich habe dolibar installiert. ich möchte unsere vereinsmitglieder und die Beitragszahlungen verwalten. ich habe die module mitglieder, banken/kasse, buchhaltung, geschäftspartner, rechnungen aktiviert. in der buchhaltung ist der skr49 eingerichtet. am 30.6.2025 sind die mitgliedsbeiträge fällig. wie gehe ich vor?
 
+## Konfig
+
+Testdaten:
+Gläubiger-ID: DE98ZZZ09999999999
+IBAN: GB33BUKB20201555555555
+
 ## scratch
 
 {

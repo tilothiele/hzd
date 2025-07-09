@@ -2,18 +2,21 @@ from models.chromosoft_member import parse_csv, ChromosoftMember
 from models.dolibarr_member import DolibarrMember
 from models.dolibarr_actions import find_by_soc, find_all, set_mitgliedsnummer, freigeben, setze_bankverbindung
 
-def key1(m: ChromosoftMember):
-    return m.firstname+"/"+m.lastname
+def chromosoftKey(m: ChromosoftMember):
+    return str(m.membership_number)
 
-def key2(m: DolibarrMember):
-    return m.firstname+"/"+m.lastname
+def dolibarrKey(m: DolibarrMember):
+    return str(m.mitgliedsnr)
 
 if __name__ == '__main__':
-    path_to_csv = 'chromosoft-export-20250621.csv'  # Pfad zur Datei anpassen
+    path_to_csv = 'chromosoft-nord-20250706.csv'  # Pfad zur Datei anpassen
     chromosoft_liste = parse_csv(path_to_csv)
     chromosoft_map = {}
     for p in chromosoft_liste:
-        chromosoft_map[key1(p)] = p
+        k = chromosoftKey(p)
+        if(k==None or k==""):
+            continue
+        chromosoft_map[k] = p
 
     dolibarr_liste = find_all()
     dolibarr_liste_sorted = sorted(dolibarr_liste, key=lambda p: (p.lastname.lower(), p.firstname.lower()))
@@ -24,8 +27,8 @@ if __name__ == '__main__':
         if p.fk_soc:
             bank_accounts = find_by_soc(p.fk_soc)
             ibans = ",".join([account.iban for account in bank_accounts])
-        mnr = "" if p.mitgliedsnr==None else p.mitgliedsnr
-        c: ChromosoftMember = chromosoft_map.get(key2(p))
+        mnr = "" if p.mitgliedsnr==None or p.mitgliedsnr=="-" else p.mitgliedsnr
+        c: ChromosoftMember = None if p.mitgliedsnr==None or p.mitgliedsnr=="-" else chromosoft_map.get(dolibarrKey(p))
         if c:
             cf = "RG-"+mnr
             if p.mitgliedsnr==None and c.membership_number!=None:

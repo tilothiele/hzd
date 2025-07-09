@@ -31,7 +31,11 @@ def setze_bankverbindung(member: DolibarrMember, iban, bic):
         'Accept': 'application/json',
         'Content-Type': 'application/json'
     }
-    if member.fk_soc==None:
+    socid = member.fk_soc
+    name = member.firstname+" "+member.lastname
+    if socid==None:
+        id = int(member.id)
+        personenkonto = f"1000{id:04d}"
         print("Kein Geschäftspartner vorhanden -> anlegen", iban, bic)
         data = {
             "status": "1",
@@ -39,22 +43,53 @@ def setze_bankverbindung(member: DolibarrMember, iban, bic):
             "country_code": "DE",
             "client": "1",
             "code_client": "-1",
-            "name": member.firstname+" "+member.lastname,
+            "name": name,
             "email": member.email,
-            "entity": "1"
+            "entity": "1",
+            "mode_reglement_id": "3",
+            "tva_assuj": "0",
+            "code_compta": personenkonto
         }
         url = f"{host}/api/index.php/thirdparties"
         response = requests.post(url, headers=headers, data=json.dumps(data))
-        print(response.text)
         response.raise_for_status()
-        soc_id = response.text
+        socid = response.text
         data = {
-            "fk_soc": soc_id,
-            "socid": soc_id
+            "fk_soc": socid,
+            "socid": socid
         }
         put_member(member=member, data=data)
-
-    url = f"{host}/api/index.php/members/{member.id}"
+    if iban==None or iban=='-':
+        return
+    if bic=='-':
+        bic = None;
+    bank_accounts = find_by_soc(socid)
+    for ba in bank_accounts:
+        if ba.iban==iban:
+            print("IBAN "+iban+" gibt es schon für diesen Geschäftspartner")
+            return
+        else:
+            print(name+" thirdparty hat ein anderes Konto: "+ba.iban)
+    print("Bankkonto "+iban+" anlegen.")
+    url = f"https://openiban.com/validate/{iban}?getBIC=true"
+    response = requests.get(url)
+    response.raise_for_status()
+    iban_response = response.json()
+    #print(iban_response)
+    if iban_response["valid"]==False:
+        print("*** WARN *** iban "+iban+" nicht gültig")
+        return
+    data = {
+        "label": name,
+        "iban": iban,
+        "bic": iban_response["bankData"]["bic"],
+        "bank": iban_response["bankData"]["name"],
+        "default_rib": "1",
+        "frstrecur": "RCUR"
+    }
+    url = f"{host}/api/index.php/thirdparties/{socid}/bankaccounts"
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    response.raise_for_status()
     return
 
 def put_member(member: DolibarrMember, data):
@@ -131,7 +166,7 @@ def find_all() -> List[DolibarrMember]:
     return rv
 
 
-def find_by_name(vorname, nachname):
+def find_by_name(vorname, nachname) -> DolibarrMember:
     # .env-Datei laden
     load_dotenv()
     host = os.getenv('DOLIBARR_HOST')
