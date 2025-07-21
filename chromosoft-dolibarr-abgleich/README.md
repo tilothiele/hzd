@@ -45,6 +45,11 @@ Testdaten:
 Gläubiger-ID: DE98ZZZ09999999999
 IBAN: GB33BUKB20201555555555
 
+## Daten einspielen
+
+* process_dolibarr_members.py
+* process_lastschriften_2024.py
+
 ## scratch
 
 {

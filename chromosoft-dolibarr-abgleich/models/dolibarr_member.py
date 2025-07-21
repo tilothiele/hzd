@@ -67,6 +67,13 @@ class DolibarrMember:
             mitgliedsnr=optional_str(data.get("array_options"), "options_mitgliedsnummer")
         )
 
+def mussZahlen(p: DolibarrMember) -> bool:
+    if(p.typeid=='6'):
+        return False
+    if(not p.statut=='1'):
+        return False
+    return True
+
 def optional_str(dict, name):
     if dict==None:
         return None
@@ -115,6 +122,4 @@ def typeid2type(typeid):
         return "Kurzmitglied"
     return
 
-def find_by_name(firstname, lastname):
 
-    return None

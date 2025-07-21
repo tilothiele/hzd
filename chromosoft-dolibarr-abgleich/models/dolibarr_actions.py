@@ -22,6 +22,14 @@ def freigeben(member: DolibarrMember):
     put_member(member=member, data=data)
     return
 
+def get_by_id(id: int) -> DolibarrMember:
+    url = f"/api/index.php/members/{str(id)}"
+    response = getDolibarApiResponse(url, None)
+    response.raise_for_status()
+
+    daten = response.json()
+    return DolibarrMember.from_json(daten)
+
 def setze_bankverbindung(member: DolibarrMember, iban, bic):
     load_dotenv()
     host = os.getenv('DOLIBARR_HOST')
@@ -69,7 +77,8 @@ def setze_bankverbindung(member: DolibarrMember, iban, bic):
             print("IBAN "+iban+" gibt es schon für diesen Geschäftspartner")
             return
         else:
-            print(name+" thirdparty hat ein anderes Konto: "+ba.iban)
+            print("*** ERROR *** " + name+" thirdparty hat ein anderes Konto: "+ba.iban+" nicht "+iban)
+            return
     print("Bankkonto "+iban+" anlegen.")
     url = f"https://openiban.com/validate/{iban}?getBIC=true"
     response = requests.get(url)
@@ -92,6 +101,20 @@ def setze_bankverbindung(member: DolibarrMember, iban, bic):
     response.raise_for_status()
     return
 
+def patch_bank_account(soc_id, bank_id, patch_data):
+    load_dotenv()
+    host = os.getenv('DOLIBARR_HOST')
+    api_key = os.getenv('DOLIBARR_API_KEY')
+    headers = {
+        'DOLAPIKEY': api_key,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+    url = f"{host}/api/index.php/thirdparties/{soc_id}/bankaccounts/{bank_id}"
+    response = requests.put(url, headers=headers, data=json.dumps(patch_data))
+    response.raise_for_status()
+    return
+
 def put_member(member: DolibarrMember, data):
     load_dotenv()
     host = os.getenv('DOLIBARR_HOST')
@@ -108,17 +131,10 @@ def put_member(member: DolibarrMember, data):
     response.raise_for_status()
 
 def find_by_soc(soc_id) -> List[BankAccount]:
-    load_dotenv()
-    host = os.getenv('DOLIBARR_HOST')
-    api_key = os.getenv('DOLIBARR_API_KEY')
-    url = f"{host}/api/index.php/thirdparties/{soc_id}/bankaccounts"
-    headers = {
-        'DOLAPIKEY': api_key,
-        'Accept': 'application/json'
-    }
+    url = f"/api/index.php/thirdparties/{soc_id}/bankaccounts"
 
     # GET-Request an Dolibarr
-    response = requests.get(url, headers=headers)
+    response = getDolibarApiResponse(url, None)
 
     # Antwort prüfen
     if response.status_code == 200:
@@ -131,14 +147,7 @@ def find_by_soc(soc_id) -> List[BankAccount]:
 
 
 def find_all() -> List[DolibarrMember]:
-    load_dotenv()
-    host = os.getenv('DOLIBARR_HOST')
-    api_key = os.getenv('DOLIBARR_API_KEY')
-    url = f"{host}/api/index.php/members"
-    headers = {
-        'DOLAPIKEY': api_key,
-        'Accept': 'application/json'
-    }
+    url = "/api/index.php/members"
 
     rv = []
     more_data = True
@@ -153,7 +162,7 @@ def find_all() -> List[DolibarrMember]:
 
         }
         # GET-Request an Dolibarr
-        response = requests.get(url, headers=headers, params=params)
+        response = getDolibarApiResponse(url, params)
         response.raise_for_status()
 
         # Antwort prüfen
@@ -167,23 +176,14 @@ def find_all() -> List[DolibarrMember]:
 
 
 def find_by_name(vorname, nachname) -> DolibarrMember:
-    # .env-Datei laden
-    load_dotenv()
-    host = os.getenv('DOLIBARR_HOST')
-    api_key = os.getenv('DOLIBARR_API_KEY')
     # SQL-Filter für exakte Übereinstimmung
     sqlfilters = f"(firstname:=:'{vorname}') AND (lastname:=:'{nachname}')"
 
     # API-Endpunkt
-    url = f"{host}/api/index.php/members"
+    url = "/api/index.php/members"
     params = {'sqlfilters': sqlfilters}
-    headers = {
-        'DOLAPIKEY': api_key,
-        'Accept': 'application/json'
-    }
 
-    # GET-Request an Dolibarr
-    response = requests.get(url, headers=headers, params=params)
+    response = getDolibarApiResponse(url, params)
 
     # Antwort prüfen
     if response.status_code == 200:
@@ -197,3 +197,31 @@ def find_by_name(vorname, nachname) -> DolibarrMember:
                 raise
             return daten[0]
     return None
+
+def getDolibarApiResponse(url: str, params):
+    # .env-Datei laden
+    load_dotenv()
+    host = os.getenv('DOLIBARR_HOST')
+    api_key = os.getenv('DOLIBARR_API_KEY')
+
+    headers = {
+        'DOLAPIKEY': api_key,
+        'Accept': 'application/json'
+    }
+
+    # GET-Request an Dolibarr
+    return requests.get(f"{host}{url}", headers=headers, params=params)
+
+def hasMitgliedsantrag(member_id) -> bool:
+    url = "/api/index.php/documents"
+    params = {
+        "modulepart": "member",
+        "id": str(member_id)
+    }
+    response = getDolibarApiResponse(url, params);
+    if response.status_code == 200:
+        data = response.json()
+        for item in data:
+            if "Mitgliedsantrag" in item["fullname"]:
+                return True
+    return False
