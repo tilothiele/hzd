@@ -22,12 +22,23 @@ CREDITOR_BIC = os.getenv('CREDITOR_BIC')
 CREDITOR_ID = os.getenv('CREDITOR_ID')
 SEPA_SEQUENCE = "RCUR"  # Einmalig: OOFF, Wiederholung: RCUR
 
-# XML-Namespace
-NS = {"": "urn:iso:std:iso:20022:tech:xsd:pain.008.001.02"}
-ET.register_namespace('', NS[""])
+# Register Namespaces
+ET.register_namespace('', 'urn:iso:std:iso:20022:tech:xsd:pain.008.001.08')
+ET.register_namespace('xsi', 'http://www.w3.org/2001/XMLSchema-instance')
 
-# Root-Dokument aufbauen
-document = ET.Element("Document", xmlns=NS[""])
+# Namespaces
+ns = {
+    '': 'urn:iso:std:iso:20022:tech:xsd:pain.008.001.08',
+    'xsi': 'http://www.w3.org/2001/XMLSchema-instance'
+}
+
+# Create root element with required attributes
+attrib = {
+    '{http://www.w3.org/2001/XMLSchema-instance}schemaLocation':
+        'urn:iso:std:iso:20022:tech:xsd:pain.008.001.08 pain.008.001.08.xsd'
+}
+document = ET.Element('{urn:iso:std:iso:20022:tech:xsd:pain.008.001.08}Document', attrib)
+
 cstmr_drct_db_initn = ET.SubElement(document, "CstmrDrctDbtInitn")
 
 # Gruppenübersicht
