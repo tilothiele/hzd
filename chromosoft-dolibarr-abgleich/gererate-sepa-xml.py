@@ -11,19 +11,21 @@ load_dotenv()
 API_KEY = os.getenv('API_KEY')
 
 # Eingabedatei (CSV)
-csv_file = "lastschriften.csv"
+fname = "hzd-og-hh-mitgliedsbeitraege-2025"
+csv_file = fname+".csv"
+
 # Ausgabedatei (XML)
-xml_file = "sepa_lastschrift.xml"
+xml_file = fname+".xml"
 
 # Creditor-Informationen
 CREDITOR_NAME = os.getenv('CREDITOR_NAME')
 CREDITOR_IBAN = os.getenv('CREDITOR_IBAN')
 CREDITOR_BIC = os.getenv('CREDITOR_BIC')
 CREDITOR_ID = os.getenv('CREDITOR_ID')
-SEPA_SEQUENCE = "RCUR"  # Einmalig: OOFF, Wiederholung: RCUR
+SEPA_SEQUENCE = "OOFF"  # Einmalig: OOFF, Wiederholung: RCUR
 
 # XML-Namespace
-NS = {"": "urn:iso:std:iso:20022:tech:xsd:pain.008.001.02"}
+NS = {"": "urn:iso:std:iso:20022:tech:xsd:pain.008.001.08"}
 ET.register_namespace('', NS[""])
 
 # Root-Dokument aufbauen
@@ -32,8 +34,8 @@ cstmr_drct_db_initn = ET.SubElement(document, "CstmrDrctDbtInitn")
 
 # Gruppenübersicht
 grp_hdr = ET.SubElement(cstmr_drct_db_initn, "GrpHdr")
-ET.SubElement(grp_hdr, "MsgId").text = str(uuid.uuid4())
-ET.SubElement(grp_hdr, "CreDtTm").text = datetime.now().isoformat()
+ET.SubElement(grp_hdr, "MsgId").text = str(uuid.uuid4().hex)
+ET.SubElement(grp_hdr, "CreDtTm").text = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 ET.SubElement(grp_hdr, "NbOfTxs").text = "0"  # wird später ersetzt
 ET.SubElement(grp_hdr, "CtrlSum").text = "0.00"  # wird später ersetzt
 initg_pty = ET.SubElement(grp_hdr, "InitgPty")
@@ -41,7 +43,7 @@ ET.SubElement(initg_pty, "Nm").text = CREDITOR_NAME
 
 # Payment-Informationen
 pmt_inf = ET.SubElement(cstmr_drct_db_initn, "PmtInf")
-ET.SubElement(pmt_inf, "PmtInfId").text = str(uuid.uuid4())
+ET.SubElement(pmt_inf, "PmtInfId").text = str(uuid.uuid4().hex)
 ET.SubElement(pmt_inf, "PmtMtd").text = "DD"
 ET.SubElement(pmt_inf, "BtchBookg").text = "true"
 ET.SubElement(pmt_inf, "NbOfTxs").text = "0"  # später ersetzen
@@ -63,7 +65,7 @@ id_acct = ET.SubElement(cdtr_acct, "Id")
 ET.SubElement(id_acct, "IBAN").text = CREDITOR_IBAN
 cdtr_agt = ET.SubElement(pmt_inf, "CdtrAgt")
 fin_instn_id = ET.SubElement(cdtr_agt, "FinInstnId")
-ET.SubElement(fin_instn_id, "BIC").text = CREDITOR_BIC
+ET.SubElement(fin_instn_id, "BICFI").text = CREDITOR_BIC
 cdtr_schme_id = ET.SubElement(pmt_inf, "CdtrSchmeId")
 prt = ET.SubElement(cdtr_schme_id, "Id")
 org_id = ET.SubElement(prt, "OrgId")
@@ -76,40 +78,55 @@ ET.SubElement(schme_nm, "Prtry").text = "SEPA"
 tx_count = 0
 tx_total = 0.00
 
+n = 0
 with open(csv_file, newline='', encoding="utf-8") as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
-        amount = float(row["Betrag"])
+
+#        iban,betrag,kontoinhaber,buchungstext
+        n = n+1
+        print("record "+str(n))
+
+        b = row["betrag"]
+        if(b==None):
+            break
+        amount = float(b)
         tx_total += amount
         tx_count += 1
 
         drct_dbt_tx_inf = ET.SubElement(pmt_inf, "DrctDbtTxInf")
 
-        rmt_inf = ET.SubElement(drct_dbt_tx_inf, "RmtInf")
-        ET.SubElement(rmt_inf, "Ustrd").text = row["Verwendungszweck"]
-
         pmt_id = ET.SubElement(drct_dbt_tx_inf, "PmtId")
-        ET.SubElement(pmt_id, "EndToEndId").text = str(uuid.uuid4())
+        ET.SubElement(pmt_id, "EndToEndId").text = "NOTPROVIDED"
 
         instd_amt = ET.SubElement(drct_dbt_tx_inf, "InstdAmt", Ccy="EUR")
         instd_amt.text = f"{amount:.2f}"
 
         drct_dbt_tx = ET.SubElement(drct_dbt_tx_inf, "DrctDbtTx")
         mndt_rltd_inf = ET.SubElement(drct_dbt_tx, "MndtRltdInf")
-        ET.SubElement(mndt_rltd_inf, "MndtId").text = row["Mandatsref"]
-        ET.SubElement(mndt_rltd_inf, "DtOfSgntr").text = row["Mandatsdatum"]
-        ET.SubElement(mndt_rltd_inf, "AmdmntInd").text = "false"
+        ET.SubElement(mndt_rltd_inf, "MndtId").text = "HZD-OG-HH-"+row["Mandatsreferenz"]
+        mv = datetime.strptime(row["mandat_vom"], "%d.%m.%Y")
+        ET.SubElement(mndt_rltd_inf, "DtOfSgntr").text = mv.strftime("%Y-%m-%d")
+        # ET.SubElement(mndt_rltd_inf, "AmdmntInd").text = "false"
 
         dbtr_agt = ET.SubElement(drct_dbt_tx_inf, "DbtrAgt")
         fin_instn_id = ET.SubElement(dbtr_agt, "FinInstnId")
-        ET.SubElement(fin_instn_id, "BIC").text = "NOTPROVIDED"
+        othr = ET.SubElement(fin_instn_id, "Othr")
+        ET.SubElement(othr, "Id").text = "NOTPROVIDED"
 
         dbtr = ET.SubElement(drct_dbt_tx_inf, "Dbtr")
-        ET.SubElement(dbtr, "Nm").text = row["Name"]
+        ET.SubElement(dbtr, "Nm").text = row["kontoinhaber"]
 
         dbtr_acct = ET.SubElement(drct_dbt_tx_inf, "DbtrAcct")
         id_acct = ET.SubElement(dbtr_acct, "Id")
-        ET.SubElement(id_acct, "IBAN").text = row["IBAN"]
+        ET.SubElement(id_acct, "IBAN").text = row["iban"]
+
+        rmt_inf = ET.SubElement(drct_dbt_tx_inf, "RmtInf")
+        bt = row["buchungstext"]
+        bt1 = bt[:137] if len(bt) > 140 else bt
+        if(len(bt)!=len(bt1)):
+            print("gekürzt "+bt1)
+        ET.SubElement(rmt_inf, "Ustrd").text = bt1
 
 # Gruppensummen nachtragen
 grp_hdr.find("NbOfTxs").text = str(tx_count)
