@@ -1,8 +1,13 @@
 from models.dolibarr_member import DolibarrMember
-from models.dolibarr_actions import find_by_soc, find_all, set_mitgliedsnummer, freigeben, setze_bankverbindung
+from models.dolibarr_actions import find_by_soc, find_all, setze_bankverbindung
 from dataclasses import dataclass
 import csv
-from typing import Optional, List
+from typing import List
+
+# -------------------------------------------
+# nimmt die alten Lastschrift-Daten von Angelika
+# fügt die Bankverbindungen hinzu.
+# -------------------------------------------
 
 @dataclass
 class LastschritDatensatz:

@@ -7,7 +7,9 @@ import csv
 from typing import Optional, List
 
 # -----------------------------------------------------------------------
+# Liest die Datei Lastschriften_IBAN_Datum.csv
 # für jede Bankverbindung wird für jede IBANS der Kontoinhaber und das Unterzeichnerdatum kopiert.
+# verändert den Datensatz in Dolibarr
 # -----------------------------------------------------------------------
 
 

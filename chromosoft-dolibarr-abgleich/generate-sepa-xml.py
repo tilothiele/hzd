@@ -5,13 +5,18 @@ from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
 
+# ----------------------------------------------------------
+# Generiert die Datei hzd-og-hh-mitgliedsbeitraege-2025.xml mit Lastschriften
+# aus der Datei hzd-og-hh-mitgliedsbeitraege-2025.csv
+# ----------------------------------------------------------
+
 # .env-Datei laden
 load_dotenv()
 
 API_KEY = os.getenv('API_KEY')
 
 # Eingabedatei (CSV)
-fname = "hzd-og-hh-mitgliedsbeitraege-2025"
+fname = "hzd-og-hh-mitgliedsbeitraege-2025-1"
 csv_file = fname+".csv"
 
 # Ausgabedatei (XML)

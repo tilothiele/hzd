@@ -1,8 +1,13 @@
 from models.dolibarr_member import DolibarrMember,mussZahlen
-from models.dolibarr_actions import find_by_soc, find_all, hasMitgliedsantrag
+from models.dolibarr_actions import find_by_soc, find_all
 from dataclasses import dataclass
 import csv
-from typing import Optional, List
+
+# -----------------------------------------------------------------
+# Liest die Datei Lastschriften_IBAN_Datum.csv
+# Hold alle aktiven Mitglieder von Dolibarr
+# Schreibt auf stdout die Lastschriftdatensätze als csv
+# -----------------------------------------------------------------
 
 @dataclass
 class LastschritDatensatz:
@@ -40,6 +45,7 @@ class AbgleichDatensatz:
     kontoinhaber: str
     datum: str
     iban: str
+    mandatsreferenz: str
 
 def lastschriftenKey(m: AbgleichDatensatz):
     return str(m.name)
@@ -52,11 +58,14 @@ def parse_abgleich_csv() -> dict[str, AbgleichDatensatz]:
     file_path = 'Lastschriften_IBAN_Datum.csv'  # Pfad zur Datei anpassen
     with open(file_path, newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile)
+        nr = 0
         for row in reader:
+            nr = nr + 1
             ds = AbgleichDatensatz(
                 kontoinhaber=row['Kontoinhaber'],
                 datum=row['Datum des Mandates'],
-                iban=row['IBAN']
+                iban=row['IBAN'],
+                mandatsreferenz=str(nr)
             )
             rv[ds.iban] = ds
     return rv;
@@ -70,6 +79,8 @@ if __name__ == '__main__':
     dolibarr_liste_sorted = sorted(dolibarr_liste, key=lambda p: (p.lastname.lower(), p.firstname.lower()))
     for p in dolibarr_liste_sorted:
         if not mussZahlen(p):
+            continue
+        if not ("Bensemann" in p.lastname):
             continue
         ibans = ""
         kontoinhaber = ""
@@ -95,13 +106,14 @@ if __name__ == '__main__':
 
     n = 0
     gesamt = 0
-    print("iban,betrag,kontoinhaber,mandat_vom,buchungstext")
+    print("iban,betrag,kontoinhaber,mandat_vom,buchungstext,Mandatsreferenz")
     for lastschrift in lastschriften_map.values():
         n = n+1
         gesamt = gesamt + lastschrift.betrag
+        #print(lastschrift.mandat)
         a = ad[lastschrift.iban]
         buchungstext = "HZD OG-Hamburg Mitgliedsbeitrag 2025 "+lastschrift.mandat
-        print(lastschrift.iban+","+str(lastschrift.betrag)+","+a.kontoinhaber+","+a.datum+","+buchungstext)
+        print(lastschrift.iban+","+str(lastschrift.betrag)+","+a.kontoinhaber+","+a.datum+","+buchungstext+","+a.mandatsreferenz)
 
     print(str(n)+" Datensätze erzeugt")
     print("Gesamtbetrag="+str(gesamt))

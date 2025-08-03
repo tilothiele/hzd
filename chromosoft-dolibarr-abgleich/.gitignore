@@ -1,5 +1,6 @@
 .env
 *.csv
+*.CSV
 *.xlsx
 *.ods
 *.xml

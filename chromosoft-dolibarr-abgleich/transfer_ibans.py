@@ -2,10 +2,13 @@ from models.dolibarr_member import DolibarrMember
 from models.dolibarr_actions import find_by_soc,  get_by_id, setze_bankverbindung
 from dataclasses import dataclass
 import csv
-from typing import Optional, List
+from typing import List
 
 # -----------------------------------------------------------------------
 # Die IBANS werden vom Hauptmitglied zum Familienmitglied kopiert
+# liest die Datei transfer-ibans.csv
+# nimmt in dolibarr die kontoverbindung des hauptmitlgieds (1. spalte)
+# kopiert sie in die kontoverbindung des familienmitglieds (2. spalte)
 # -----------------------------------------------------------------------
 
 @dataclass
