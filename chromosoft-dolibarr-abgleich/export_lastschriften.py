@@ -1,23 +1,17 @@
 from models.dolibarr_member import DolibarrMember,mussZahlen
 from models.dolibarr_actions import find_by_soc, find_all
-from dataclasses import dataclass
+import datetime
 import csv
+import uuid
+import os
+import xml.etree.ElementTree as ET
+from dotenv import load_dotenv
 
 # -----------------------------------------------------------------
 # Liest die Datei Lastschriften_IBAN_Datum.csv
 # Hold alle aktiven Mitglieder von Dolibarr
 # Schreibt auf stdout die Lastschriftdatensätze als csv
 # -----------------------------------------------------------------
-
-@dataclass
-class LastschritDatensatz:
-    name: str
-    mandat: str
-    betrag: float
-    iban: str
-
-def lastschriftenKey(m: LastschritDatensatz):
-    return str(m.iban)
 
 def dolibarrKey(m: DolibarrMember):
     return m.firstname + " " + m.lastname
@@ -40,80 +34,191 @@ def typeid2Beitrag(typeid) -> float:
 #        return "Kurzmitglied"
     raise
 
-@dataclass
-class AbgleichDatensatz:
-    kontoinhaber: str
-    datum: str
-    iban: str
-    mandatsreferenz: str
-
-def lastschriftenKey(m: AbgleichDatensatz):
-    return str(m.name)
-
 def dolibarrKey(m: DolibarrMember):
     return m.firstname + " " + m.lastname
 
-def parse_abgleich_csv() -> dict[str, AbgleichDatensatz]:
-    rv = {}
-    file_path = 'Lastschriften_IBAN_Datum.csv'  # Pfad zur Datei anpassen
-    with open(file_path, newline='', encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
-        nr = 0
-        for row in reader:
-            nr = nr + 1
-            ds = AbgleichDatensatz(
-                kontoinhaber=row['Kontoinhaber'],
-                datum=row['Datum des Mandates'],
-                iban=row['IBAN'],
-                mandatsreferenz=str(nr)
-            )
-            rv[ds.iban] = ds
-    return rv;
-
-
 if __name__ == '__main__':
-    ad = parse_abgleich_csv()
-    lastschriften_map = {}
 
     dolibarr_liste = find_all()
     dolibarr_liste_sorted = sorted(dolibarr_liste, key=lambda p: (p.lastname.lower(), p.firstname.lower()))
+
+    xml_file = "sepa-lastschriften.xml"
+
+    # .env-Datei laden
+    load_dotenv()
+
+    API_KEY = os.getenv('API_KEY')
+
+    # Creditor-Informationen
+    CREDITOR_NAME = os.getenv('CREDITOR_NAME')
+    CREDITOR_IBAN = os.getenv('CREDITOR_IBAN')
+    CREDITOR_BIC = os.getenv('CREDITOR_BIC')
+    CREDITOR_ID = os.getenv('CREDITOR_ID')
+    SEPA_SEQUENCE = "OOFF"  # Einmalig: OOFF, Wiederholung: RCUR
+
+    # Register Namespaces
+    ET.register_namespace('', 'urn:iso:std:iso:20022:tech:xsd:pain.008.001.08')
+    ET.register_namespace('xsi', 'http://www.w3.org/2001/XMLSchema-instance')
+
+    # Namespaces
+    ns = {
+        '': 'urn:iso:std:iso:20022:tech:xsd:pain.008.001.08',
+        'xsi': 'http://www.w3.org/2001/XMLSchema-instance'
+    }
+
+    # Create root element with required attributes
+    attrib = {
+        '{http://www.w3.org/2001/XMLSchema-instance}schemaLocation':
+            'urn:iso:std:iso:20022:tech:xsd:pain.008.001.08 pain.008.001.08.xsd'
+    }
+    document = ET.Element('{urn:iso:std:iso:20022:tech:xsd:pain.008.001.08}Document', attrib)
+
+    cstmr_drct_db_initn = ET.SubElement(document, "CstmrDrctDbtInitn")
+
+    # Gruppenübersicht
+    grp_hdr = ET.SubElement(cstmr_drct_db_initn, "GrpHdr")
+    ET.SubElement(grp_hdr, "MsgId").text = str(uuid.uuid4().hex)
+    ET.SubElement(grp_hdr, "CreDtTm").text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    ET.SubElement(grp_hdr, "NbOfTxs").text = "0"  # wird später ersetzt
+    ET.SubElement(grp_hdr, "CtrlSum").text = "0.00"  # wird später ersetzt
+    initg_pty = ET.SubElement(grp_hdr, "InitgPty")
+    ET.SubElement(initg_pty, "Nm").text = CREDITOR_NAME
+
+    # Payment-Informationen
+    pmt_inf = ET.SubElement(cstmr_drct_db_initn, "PmtInf")
+
+
+    # Namespaces
+    ns = {
+        '': 'urn:iso:std:iso:20022:tech:xsd:pain.008.001.08',
+        'xsi': 'http://www.w3.org/2001/XMLSchema-instance'
+    }
+
+    # Create root element with required attributes
+    attrib = {
+        '{http://www.w3.org/2001/XMLSchema-instance}schemaLocation':
+            'urn:iso:std:iso:20022:tech:xsd:pain.008.001.08 pain.008.001.08.xsd'
+    }
+    document = ET.Element('{urn:iso:std:iso:20022:tech:xsd:pain.008.001.08}Document', attrib)
+
+    cstmr_drct_db_initn = ET.SubElement(document, "CstmrDrctDbtInitn")
+
+    # Gruppenübersicht
+    grp_hdr = ET.SubElement(cstmr_drct_db_initn, "GrpHdr")
+    ET.SubElement(grp_hdr, "MsgId").text = str(uuid.uuid4().hex)
+    ET.SubElement(grp_hdr, "CreDtTm").text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    ET.SubElement(grp_hdr, "NbOfTxs").text = "0"  # wird später ersetzt
+    ET.SubElement(grp_hdr, "CtrlSum").text = "0.00"  # wird später ersetzt
+    initg_pty = ET.SubElement(grp_hdr, "InitgPty")
+    ET.SubElement(initg_pty, "Nm").text = CREDITOR_NAME
+
+    # Payment-Informationen
+    pmt_inf = ET.SubElement(cstmr_drct_db_initn, "PmtInf")
+    ET.SubElement(pmt_inf, "PmtInfId").text = str(uuid.uuid4().hex)
+    ET.SubElement(pmt_inf, "PmtMtd").text = "DD"
+    ET.SubElement(pmt_inf, "BtchBookg").text = "true"
+    ET.SubElement(pmt_inf, "NbOfTxs").text = "0"  # später ersetzen
+    ET.SubElement(pmt_inf, "CtrlSum").text = "0.00"  # später ersetzen
+
+    pmt_tp_inf = ET.SubElement(pmt_inf, "PmtTpInf")
+    svc_lvl = ET.SubElement(pmt_tp_inf, "SvcLvl")
+    ET.SubElement(svc_lvl, "Cd").text = "SEPA"
+    lcl_instrm = ET.SubElement(pmt_tp_inf, "LclInstrm")
+    ET.SubElement(lcl_instrm, "Cd").text = "CORE"
+    ET.SubElement(pmt_tp_inf, "SeqTp").text = SEPA_SEQUENCE
+
+    ET.SubElement(pmt_inf, "ReqdColltnDt").text = (datetime.datetime.now() + datetime.timedelta(days=2)).date().isoformat()
+
+    cdtr = ET.SubElement(pmt_inf, "Cdtr")
+    ET.SubElement(cdtr, "Nm").text = CREDITOR_NAME
+    cdtr_acct = ET.SubElement(pmt_inf, "CdtrAcct")
+    id_acct = ET.SubElement(cdtr_acct, "Id")
+    ET.SubElement(id_acct, "IBAN").text = CREDITOR_IBAN
+    cdtr_agt = ET.SubElement(pmt_inf, "CdtrAgt")
+    fin_instn_id = ET.SubElement(cdtr_agt, "FinInstnId")
+    ET.SubElement(fin_instn_id, "BICFI").text = CREDITOR_BIC
+    cdtr_schme_id = ET.SubElement(pmt_inf, "CdtrSchmeId")
+    prt = ET.SubElement(cdtr_schme_id, "Id")
+    org_id = ET.SubElement(prt, "PrvtId")
+    othr = ET.SubElement(org_id, "Othr")
+    ET.SubElement(othr, "Id").text = CREDITOR_ID
+    schme_nm = ET.SubElement(othr, "SchmeNm")
+    ET.SubElement(schme_nm, "Prtry").text = "SEPA"
+
+    # CSV verarbeiten
+    tx_count = 0
+    tx_total = 0.00
+
+    n = 0
+    buchungstext = "HZD OG-Hamburg Mitgliedsbeitrag "+datetime.datetime.now().strftime("%Y")
+    print("iban,betrag,kontoinhaber,mandat_vom,buchungstext,Mandatsreferenz")
     for p in dolibarr_liste_sorted:
         if not mussZahlen(p):
             continue
-        if not ("Bensemann" in p.lastname):
+#        print(p.id, p.firstname)
+# Isabell
+        if p.id != "182":
             continue
-        ibans = ""
-        kontoinhaber = ""
+        bank_account = None
         if p.fk_soc:
             bank_accounts = find_by_soc(p.fk_soc)
-            ibans = ",".join([account.iban for account in bank_accounts])
-        if ibans == "":
+            bank_account = bank_accounts[0]
+        if bank_account == None:
             continue
-        kontoinhaber = dolibarrKey(p)
-        l = lastschriften_map.get(ibans)
-        if l == None:
-            l = LastschritDatensatz(
-                iban = ibans,
-                mandat = "",
-                betrag= 0,
-                name=kontoinhaber
-            )
-            lastschriften_map[ibans] = l
+        kontoinhaber = bank_account.proprio
         b = typeid2Beitrag(p.typeid)
-        l.betrag = l.betrag + b
-        sep = ""  if len(l.mandat)==0 else "+"
-        l.mandat = l.mandat + sep + str(b)+"("+dolibarrKey(p)+")"
+        dr = datetime.datetime.fromtimestamp(bank_account.date_rum)
+        bt = buchungstext+" "+p.type+" "+p.firstname+" "+p.lastname
+        print(bank_account.iban+","+str(b)+","+bank_account.proprio+","+dr.strftime("%d.%m.%Y")+","+bt+","+bank_account.rum)
 
-    n = 0
-    gesamt = 0
-    print("iban,betrag,kontoinhaber,mandat_vom,buchungstext,Mandatsreferenz")
-    for lastschrift in lastschriften_map.values():
-        n = n+1
-        gesamt = gesamt + lastschrift.betrag
-        #print(lastschrift.mandat)
-        a = ad[lastschrift.iban]
-        buchungstext = "HZD OG-Hamburg Mitgliedsbeitrag 2025 "+lastschrift.mandat
-        print(lastschrift.iban+","+str(lastschrift.betrag)+","+a.kontoinhaber+","+a.datum+","+buchungstext+","+a.mandatsreferenz)
+        amount = float(b)
+        tx_total += amount
+        tx_count += 1
 
-    print(str(n)+" Datensätze erzeugt")
-    print("Gesamtbetrag="+str(gesamt))
+        drct_dbt_tx_inf = ET.SubElement(pmt_inf, "DrctDbtTxInf")
+
+        pmt_id = ET.SubElement(drct_dbt_tx_inf, "PmtId")
+        ET.SubElement(pmt_id, "EndToEndId").text = "NOTPROVIDED"
+
+        instd_amt = ET.SubElement(drct_dbt_tx_inf, "InstdAmt", Ccy="EUR")
+        instd_amt.text = f"{amount:.2f}"
+
+        drct_dbt_tx = ET.SubElement(drct_dbt_tx_inf, "DrctDbtTx")
+        mndt_rltd_inf = ET.SubElement(drct_dbt_tx, "MndtRltdInf")
+        ET.SubElement(mndt_rltd_inf, "MndtId").text = bank_account.rum
+        ET.SubElement(mndt_rltd_inf, "DtOfSgntr").text = dr.strftime("%Y-%m-%d")
+        # ET.SubElement(mndt_rltd_inf, "AmdmntInd").text = "false"
+
+        dbtr_agt = ET.SubElement(drct_dbt_tx_inf, "DbtrAgt")
+        fin_instn_id = ET.SubElement(dbtr_agt, "FinInstnId")
+        othr = ET.SubElement(fin_instn_id, "Othr")
+        ET.SubElement(othr, "Id").text = "NOTPROVIDED"
+
+        dbtr = ET.SubElement(drct_dbt_tx_inf, "Dbtr")
+        ET.SubElement(dbtr, "Nm").text = bank_account.proprio
+
+        dbtr_acct = ET.SubElement(drct_dbt_tx_inf, "DbtrAcct")
+        id_acct = ET.SubElement(dbtr_acct, "Id")
+        ET.SubElement(id_acct, "IBAN").text = bank_account.iban
+
+        rmt_inf = ET.SubElement(drct_dbt_tx_inf, "RmtInf")
+        bt1 = bt[:137] if len(bt) > 140 else bt
+        if(len(bt)!=len(bt1)):
+            print("gekürzt "+bt1)
+        ET.SubElement(rmt_inf, "Ustrd").text = bt1
+
+    # Gruppensummen nachtragen
+    grp_hdr.find("NbOfTxs").text = str(tx_count)
+    grp_hdr.find("CtrlSum").text = f"{tx_total:.2f}"
+    pmt_inf.find("NbOfTxs").text = str(tx_count)
+    pmt_inf.find("CtrlSum").text = f"{tx_total:.2f}"
+
+    # XML speichern
+    tree = ET.ElementTree(document)
+    tree.write(xml_file, encoding="utf-8", xml_declaration=True)
+    print(f"SEPA-XML-Datei erzeugt: {xml_file}")
+
+
+
+
+

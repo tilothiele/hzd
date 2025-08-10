@@ -1,7 +1,7 @@
 from lxml import etree
 
 # Lade das XML-Dokument
-with open('hzd-og-hh-mitgliedsbeitraege-2025.xml', 'rb') as xml_file:
+with open('sepa-lastschriften.xml', 'rb') as xml_file:
     xml_doc = etree.parse(xml_file)
 
 # Lade das XSD-Schema

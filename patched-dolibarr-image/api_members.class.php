@@ -356,8 +356,8 @@ class Members extends DolibarrApi
 	 * Create member object
 	 *
 	 * @param array	$request_data   Request data
-	 * @phan-param ?array<string,string>	$request_data
-	 * @phpstan-param ?array<string,string>	$request_data
+	 * @phan-param ?array	$request_data
+	 * @phpstan-param ?array	$request_data
 	 * @return int  ID of member
 	 *
 	 * @throws	RestException	403		Access denied

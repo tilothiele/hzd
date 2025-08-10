@@ -80,7 +80,7 @@ def optional_str(dict, name):
     return dict.get(name)
 
 class BankAccount:
-    def __init__(self, id, label, bank, bic, iban, socid, datec, default_rib, rum, frstrecur, datem, proprio, date_rum):
+    def __init__(self, id, label, bank, bic, iban, socid, datec, default_rib, rum, frstrecur, datem):
         self.id = id
         self.label = label
         self.bank = bank
@@ -92,8 +92,6 @@ class BankAccount:
         self.rum = rum
         self.frstrecur = frstrecur
         self.datem = datem
-        self.proprio = proprio
-        self.date_rum = date_rum
 
     @classmethod
     def from_json(cls, json_data):
@@ -108,9 +106,7 @@ class BankAccount:
             json_data["default_rib"],
             json_data["rum"],
             json_data["frstrecur"],
-            json_data["datem"],
-            json_data["proprio"],
-            json_data["date_rum"]
+            json_data["datem"]
         )
 
 def typeid2type(typeid):
