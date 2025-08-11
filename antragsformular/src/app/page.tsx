@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, ChangeEvent, FormEvent, useRef, useEffect } from "react";
-import jsPDF from "jspdf";
 import { v4 as uuidv4 } from 'uuid';
 
 interface FormData {
@@ -36,6 +35,13 @@ export default function AntragForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [requestId, setRequestId] = useState<string>('');
   const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
+  
+  // Debug: Log requestId when it changes
+  useEffect(() => {
+    if (requestId) {
+      console.log('Request ID set:', requestId);
+    }
+  }, [requestId]);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     vorname: "",
@@ -74,7 +80,7 @@ export default function AntragForm() {
   useEffect(() => {
     const validationResult = validateFormWithData(formData);
     setIsFormValid(validationResult.isValid);
-  }, []);
+  }, [formData]);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -274,6 +280,7 @@ export default function AntragForm() {
 
       });
       setErrors({});
+      setIsFormValid(false); // Button nach Reset deaktivieren
       setRequestId(''); // Reset Request ID after successful submission
     } catch (error) {
       console.error("Fehler beim Senden:", error);

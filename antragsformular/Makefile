@@ -2,7 +2,9 @@
 
 # Variables
 IMAGE_NAME = hzd-antragsformular
-IMAGE_TAG = latest
+BRANCH_NAME = $(shell git rev-parse --abbrev-ref HEAD)
+COMMIT_HASH = $(shell git rev-parse --short HEAD)
+IMAGE_TAG = snapshot-$(BRANCH_NAME)-$(COMMIT_HASH)
 FULL_IMAGE_NAME = tilothiele/$(IMAGE_NAME):$(IMAGE_TAG)
 CONTAINER_NAME = hzd-antragsformular-container
 PORT = 3000

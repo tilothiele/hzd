@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jsPDF from 'jspdf';
+import fs from 'fs';
+import path from 'path';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,9 +34,6 @@ export async function POST(request: NextRequest) {
     // Logo (oben rechts)
     try {
       // Logo als Base64 laden
-      const logoPath = './public/logo.png';
-      const fs = require('fs');
-      const path = require('path');
       
       // Absoluten Pfad zum Logo erstellen
       const absoluteLogoPath = path.join(process.cwd(), 'public', 'logo.png');
@@ -119,7 +118,7 @@ export async function POST(request: NextRequest) {
 
       if (useTable) {
         // Tabellarische Darstellung (zweispaltig)
-        const entries = Object.entries(data).filter(([key, value]) => value && value.trim());
+        const entries = Object.entries(data).filter(([, value]) => value && value.trim());
         const halfLength = Math.ceil(entries.length / 2);
         const leftColumn = entries.slice(0, halfLength);
         const rightColumn = entries.slice(halfLength);
