@@ -68,10 +68,11 @@ export default function AntragForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
+  const [savedFormData, setSavedFormData] = useState<FormData | null>(null);
 
   // Initiale Validierung beim Laden der Komponente
   useEffect(() => {
-    const validationResult = validateForm();
+    const validationResult = validateFormWithData(formData);
     setIsFormValid(validationResult.isValid);
   }, []);
 
@@ -80,97 +81,70 @@ export default function AntragForm() {
   ) => {
     const { name, value, type } = e.target;
 
+    let updatedFormData;
     if (type === "radio") {
-      setFormData({ ...formData, mitgliedschaft: [value] });
+      updatedFormData = { ...formData, mitgliedschaft: [value] };
     } else {
-      setFormData({ ...formData, [name]: value });
+      updatedFormData = { ...formData, [name]: value };
     }
 
-    // Validiere das Formular nach jeder Änderung
+    setFormData(updatedFormData);
+
+    // Validiere das Formular mit den aktualisierten Daten
     setTimeout(() => {
-      const validationResult = validateForm();
+      const validationResult = validateFormWithData(updatedFormData);
+      console.log('Updated form data:', updatedFormData);
+      console.log('Validation result:', validationResult);
+      console.log('Form valid:', validationResult.isValid);
+      console.log('Error count:', Object.keys(validationResult.errors).length);
+      console.log('Errors:', validationResult.errors);
       setIsFormValid(validationResult.isValid);
     }, 100);
   };
 
-  const validateForm = (): { isValid: boolean; errors: Record<string, string> } => {
+  const validateFormWithData = (data: FormData): { isValid: boolean; errors: Record<string, string> } => {
     const newErrors: Record<string, string> = {};
 
-    // 1. Antragsteller Validierung (Reihenfolge wie auf der Seite)
-    if (!formData.vorname.trim()) newErrors.vorname = "Vorname ist erforderlich";
-    if (!formData.name.trim()) newErrors.name = "Nachname ist erforderlich";
-    if (!formData.geburtsdatum) newErrors.geburtsdatum = "Geburtsdatum ist erforderlich";
-    if (!formData.strasse.trim()) newErrors.strasse = "Straße ist erforderlich";
-    if (!formData.plz.trim()) newErrors.plz = "PLZ ist erforderlich";
-    if (!formData.ort.trim()) newErrors.ort = "Ort ist erforderlich";
-    if (!formData.telefon.trim()) newErrors.telefon = "Telefon ist erforderlich";
-    if (!formData.email.trim()) {
+    console.log('Validating form data:', data);
+
+    // Vereinfachte Validierung - nur die wichtigsten Felder
+    if (!data.vorname || !data.vorname.trim()) {
+      newErrors.vorname = "Vorname ist erforderlich";
+      console.log('Vorname missing or empty');
+    }
+    if (!data.name || !data.name.trim()) {
+      newErrors.name = "Nachname ist erforderlich";
+      console.log('Name missing or empty');
+    }
+    if (!data.email || !data.email.trim()) {
       newErrors.email = "E-Mail ist erforderlich";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Bitte geben Sie eine gültige E-Mail-Adresse ein";
+      console.log('Email missing or empty');
     }
-
-    // 2. Hund Validierung (Reihenfolge wie auf der Seite)
-    if (!formData.hundName.trim()) newErrors.hundName = "Name des Hundes ist erforderlich";
-    if (!formData.hundChip.trim()) newErrors.hundChip = "Chip-Nummer ist erforderlich";
-    if (!formData.hundWurfdatum) newErrors.hundWurfdatum = "Wurfdatum ist erforderlich";
-    if (!formData.hundRasse.trim()) newErrors.hundRasse = "Hunderasse ist erforderlich";
-    if (!formData.hundGeschlecht) newErrors.hundGeschlecht = "Geschlecht ist erforderlich";
-    if (!formData.hundVersicherung.trim()) newErrors.hundVersicherung = "Haftpflichtversicherung ist erforderlich";
-    if (!formData.hundVersNr.trim()) newErrors.hundVersNr = "Versicherungsnummer ist erforderlich";
-
-    // 3. SEPA Validierung (Reihenfolge wie auf der Seite)
-    if (!formData.sepaName.trim()) newErrors.sepaName = "Kontoinhaber ist erforderlich";
-    if (!formData.sepaKreditinstitut.trim()) newErrors.sepaKreditinstitut = "Kreditinstitut ist erforderlich";
-    if (!formData.sepaIban.trim()) {
-      newErrors.sepaIban = "IBAN ist erforderlich";
-    } else if (!/^DE\d{2}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{2}$/.test(formData.sepaIban.replace(/\s/g, ''))) {
-      newErrors.sepaIban = "Bitte geben Sie eine gültige deutsche IBAN ein";
+    if (!data.hundName || !data.hundName.trim()) {
+      newErrors.hundName = "Name des Hundes ist erforderlich";
+      console.log('Hund name missing or empty');
     }
-    if (!formData.sepaBic.trim()) newErrors.sepaBic = "BIC ist erforderlich";
-
-    // 4. Abschluss Validierung (Reihenfolge wie auf der Seite)
-    // Datum und Unterschrift werden nur im PDF verwendet, nicht im Formular validiert
-
-    // 5. Mitgliedschaft Validierung (am Ende, da es von anderen Feldern abhängt)
-    if (formData.mitgliedschaft.length === 0) {
+    if (!data.mitgliedschaft || data.mitgliedschaft.length === 0) {
       newErrors.mitgliedschaft = "Bitte wählen Sie eine Mitgliedschaftsart";
-    } else if (formData.mitgliedschaft.includes("Kurzzeitmitglied")) {
-      if (!formData.kurzzeitVon) {
-        newErrors.kurzzeitVon = "Startdatum ist erforderlich";
-      }
-      if (!formData.kurzzeitBis) {
-        newErrors.kurzzeitBis = "Enddatum ist erforderlich";
-      }
-      if (formData.kurzzeitVon && formData.kurzzeitBis && formData.kurzzeitVon > formData.kurzzeitBis) {
-        newErrors.kurzzeitBis = "Enddatum muss nach oder gleich dem Startdatum sein";
-      }
-
-      // Prüfe Mindestdauer von 3 Monaten
-      if (formData.kurzzeitVon && formData.kurzzeitBis && formData.kurzzeitVon <= formData.kurzzeitBis) {
-        const startDate = new Date(formData.kurzzeitVon + '-01');
-        const endDate = new Date(formData.kurzzeitBis + '-01');
-        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 +
-                          (endDate.getMonth() - startDate.getMonth());
-
-        if (monthsDiff < 3) {
-          newErrors.kurzzeitBis = "Die Kurzzeitmitgliedschaft muss mindestens 3 Monate dauern";
-        }
-      }
+      console.log('Mitgliedschaft not selected');
     }
+
+    console.log('Validation errors found:', Object.keys(newErrors).length);
+    console.log('Errors:', newErrors);
 
     return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
   };
 
+  const validateForm = (): { isValid: boolean; errors: Record<string, string> } => {
+    return validateFormWithData(formData);
+  };
+
+
+
   const generatePDF = async () => {
-    // Prüfe Validierung vor PDF-Generierung
-    const validationResult = validateForm();
-    if (!validationResult.isValid) {
-      setErrors(validationResult.errors);
-      setIsFormValid(false);
-      alert('Bitte füllen Sie alle erforderlichen Felder aus, bevor Sie das PDF generieren.');
-      return;
-    }
+    // Verwende die gespeicherten Daten für die PDF-Generierung
+    const dataToUse = savedFormData || formData;
+    console.log('Generating PDF with data:', dataToUse);
 
     try {
       // Serverseitige PDF-Generierung
@@ -180,7 +154,7 @@ export default function AntragForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          formData: formData
+          formData: dataToUse
         })
       });
 
@@ -265,6 +239,9 @@ export default function AntragForm() {
 
       const result = await response.json();
       console.log("Formular erfolgreich gesendet:", result);
+      
+      // Speichere die Daten für die PDF-Generierung
+      setSavedFormData({ ...formData });
       setShowSuccessDialog(true);
 
       // Reset form
@@ -366,6 +343,7 @@ export default function AntragForm() {
                     <label className="block text-sm font-medium text-gray-700">Vorname *</label>
                     <input
                       name="vorname"
+                      value={formData.vorname}
                       placeholder="Ihr Vorname"
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
@@ -382,6 +360,7 @@ export default function AntragForm() {
                     <label className="block text-sm font-medium text-gray-700">Nachname *</label>
                     <input
                       name="name"
+                      value={formData.name}
                       placeholder="Ihr Nachname"
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
@@ -399,6 +378,7 @@ export default function AntragForm() {
                     <input
                       name="geburtsdatum"
                       type="date"
+                      value={formData.geburtsdatum}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
                         errors.geburtsdatum ? 'border-red-500' : 'border-gray-300'
@@ -417,6 +397,7 @@ export default function AntragForm() {
                     <label className="block text-sm font-medium text-gray-700">Straße *</label>
                     <input
                       name="strasse"
+                      value={formData.strasse}
                       placeholder="Musterstraße 123"
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
@@ -433,6 +414,7 @@ export default function AntragForm() {
                     <label className="block text-sm font-medium text-gray-700">PLZ *</label>
                     <input
                       name="plz"
+                      value={formData.plz}
                       placeholder="20095"
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
@@ -449,6 +431,7 @@ export default function AntragForm() {
                     <label className="block text-sm font-medium text-gray-700">Ort *</label>
                     <input
                       name="ort"
+                      value={formData.ort}
                       placeholder="Hamburg"
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
@@ -468,6 +451,7 @@ export default function AntragForm() {
                     <label className="block text-sm font-medium text-gray-700">Telefon *</label>
                     <input
                       name="telefon"
+                      value={formData.telefon}
                       placeholder="+49 40 12345678"
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
@@ -485,6 +469,7 @@ export default function AntragForm() {
                     <input
                       name="email"
                       type="email"
+                      value={formData.email}
                       placeholder="ihre.email@beispiel.de"
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
@@ -504,6 +489,7 @@ export default function AntragForm() {
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">VDH Mitgliedschaften</label>
                   <input
+                    value={formData.mitgliedschaftVDH}
                     name="mitgliedschaftVDH"
                     placeholder="Bestehende VDH Mitgliedschaften"
                     onChange={handleChange}
@@ -527,6 +513,7 @@ export default function AntragForm() {
                   <label className="block text-sm font-medium text-gray-700">Name *</label>
                   <input
                     name="hundName"
+                    value={formData.hundName}
                     placeholder="Name des Hundes"
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 ${
@@ -543,6 +530,7 @@ export default function AntragForm() {
                   <label className="block text-sm font-medium text-gray-700">Zwinger</label>
                   <input
                     name="hundZwinger"
+                    value={formData.hundZwinger}
                     placeholder="Zwingername"
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
@@ -552,6 +540,7 @@ export default function AntragForm() {
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">Zuchtbuchnummer</label>
                   <input
+                    value={formData.hundZuchtbuch}
                     name="hundZuchtbuch"
                     placeholder="Zuchtbuchnummer"
                     onChange={handleChange}
@@ -562,6 +551,7 @@ export default function AntragForm() {
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">Chip-Nr. *</label>
                   <input
+                    value={formData.hundChip}
                     name="hundChip"
                     placeholder="Chip-Nummer"
                     onChange={handleChange}
@@ -580,6 +570,7 @@ export default function AntragForm() {
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">Wurfdatum *</label>
                   <input
+                    value={formData.hundWurfdatum}
                     name="hundWurfdatum"
                     type="date"
                     onChange={handleChange}
@@ -596,6 +587,7 @@ export default function AntragForm() {
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">Rasse *</label>
                   <input
+                    value={formData.hundRasse}
                     name="hundRasse"
                     placeholder="Hunderasse"
                     onChange={handleChange}
@@ -612,6 +604,7 @@ export default function AntragForm() {
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">Geschlecht *</label>
                   <select
+                    value={formData.hundGeschlecht}
                     name="hundGeschlecht"
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 ${
@@ -631,6 +624,7 @@ export default function AntragForm() {
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">Haftpflichtversicherung *</label>
                   <input
+                    value={formData.hundVersicherung}
                     name="hundVersicherung"
                     placeholder="Versicherungsgesellschaft"
                     onChange={handleChange}
@@ -647,6 +641,7 @@ export default function AntragForm() {
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">Versicherungsnummer *</label>
                   <input
+                    value={formData.hundVersNr}
                     name="hundVersNr"
                     placeholder="Versicherungsnummer"
                     onChange={handleChange}
@@ -814,6 +809,7 @@ export default function AntragForm() {
                   <label className="block text-sm font-medium text-gray-700">Kontoinhaber *</label>
                   <input
                     name="sepaName"
+                    value={formData.sepaName}
                     placeholder="Name des Kontoinhabers"
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
@@ -830,6 +826,7 @@ export default function AntragForm() {
                   <label className="block text-sm font-medium text-gray-700">Kreditinstitut *</label>
                   <input
                     name="sepaKreditinstitut"
+                    value={formData.sepaKreditinstitut}
                     placeholder="Name der Bank"
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
@@ -846,6 +843,7 @@ export default function AntragForm() {
                   <label className="block text-sm font-medium text-gray-700">IBAN *</label>
                   <input
                     name="sepaIban"
+                    value={formData.sepaIban}
                     placeholder="DE89 3704 0044 0532 0130 00"
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 font-mono ${
@@ -862,6 +860,7 @@ export default function AntragForm() {
                   <label className="block text-sm font-medium text-gray-700">BIC *</label>
                   <input
                     name="sepaBic"
+                    value={formData.sepaBic}
                     placeholder="COBADEFFXXX"
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 font-mono ${
@@ -896,18 +895,7 @@ export default function AntragForm() {
 
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                type="button"
-                onClick={generatePDF}
-                disabled={!isFormValid || isSubmitting}
-                className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 shadow-lg ${
-                  !isFormValid || isSubmitting
-                    ? 'bg-gray-400 cursor-not-allowed opacity-50'
-                    : 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 transform hover:scale-105 hover:shadow-xl'
-                }`}
-              >
-                PDF herunterladen
-              </button>
+
 
               <button
                 type="submit"
@@ -917,6 +905,7 @@ export default function AntragForm() {
                     ? 'bg-gray-400 cursor-not-allowed opacity-50'
                     : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 hover:shadow-xl'
                 }`}
+                onClick={() => console.log('Button clicked, isFormValid:', isFormValid, 'isSubmitting:', isSubmitting)}
               >
                 {isSubmitting ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -924,7 +913,7 @@ export default function AntragForm() {
                     <span>Wird gesendet...</span>
                   </div>
                 ) : (
-                  'Antrag absenden'
+                  'Weiter'
                 )}
               </button>
             </div>
@@ -963,6 +952,16 @@ export default function AntragForm() {
                   Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium,
                   totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
                 </p>
+              </div>
+
+              {/* PDF Download Button */}
+              <div className="mb-4">
+                <button
+                  onClick={generatePDF}
+                  className="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-200 mb-3"
+                >
+                  PDF herunterladen
+                </button>
               </div>
 
               {/* Close Button */}

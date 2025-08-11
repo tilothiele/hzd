@@ -29,11 +29,42 @@ export async function POST(request: NextRequest) {
       pdf.text(line, margin, yPosition + (index * 4));
     });
 
-    // Logo (klein, oben rechts) - Fallback Hund-Emoji
-    pdf.setFontSize(24);
-    pdf.setTextColor(59, 130, 246); // Blue-600
-    const logoX = pageWidth - margin - 10;
-    pdf.text('🐕', logoX, yPosition);
+    // Logo (oben rechts)
+    try {
+      // Logo als Base64 laden
+      const logoPath = './public/logo.png';
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Absoluten Pfad zum Logo erstellen
+      const absoluteLogoPath = path.join(process.cwd(), 'public', 'logo.png');
+      
+      if (fs.existsSync(absoluteLogoPath)) {
+        const logoBuffer = fs.readFileSync(absoluteLogoPath);
+        const logoBase64 = logoBuffer.toString('base64');
+        
+        // Logo in PDF einbetten (20x20mm)
+        const logoWidth = 20;
+        const logoHeight = 20;
+        const logoX = pageWidth - margin - logoWidth;
+        const logoY = yPosition - 15;
+        
+        pdf.addImage(`data:image/png;base64,${logoBase64}`, 'PNG', logoX, logoY, logoWidth, logoHeight);
+      } else {
+        // Fallback: Hund-Emoji wenn Logo nicht gefunden
+        pdf.setFontSize(24);
+        pdf.setTextColor(59, 130, 246); // Blue-600
+        const logoX = pageWidth - margin - 10;
+        pdf.text('🐕', logoX, yPosition);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden des Logos:', error);
+      // Fallback: Hund-Emoji
+      pdf.setFontSize(24);
+      pdf.setTextColor(59, 130, 246); // Blue-600
+      const logoX = pageWidth - margin - 10;
+      pdf.text('🐕', logoX, yPosition);
+    }
 
     yPosition += 25;
 
