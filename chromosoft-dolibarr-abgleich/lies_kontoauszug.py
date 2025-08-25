@@ -50,9 +50,45 @@ def lade_kontoauszug(pfad: str):
             eintraege.append(eintrag)
     return eintraege
 
+# Name der zu erzeugenden Datei
+filename = "test_bankimport.csv"
+
+# Header (Spaltennamen)
+header = [
+    "date",
+    "label",
+    "amount",
+    "oper",
+    "ref",
+    "categorie",
+    "transaction_id",
+    "bank_other",
+    "iban_other",
+    "owner_other",
+]
+
 
 # Beispielnutzung:
 if __name__ == "__main__":
     kontoauszug = lade_kontoauszug(import_file)
+    rows = []
     for eintrag in kontoauszug:
         print(eintrag)
+        rows.append([eintrag.buchungstag,
+                     eintrag.valutadatum,
+                     eintrag.verwendungszweck,
+                     eintrag.betrag,
+                     'VIR',
+                     eintrag.mandatsreferenz,
+                     eintrag.buchungstext,
+                     '',
+                     eintrag.bic,
+                     eintrag.iban,
+                     eintrag.beguenstigter
+                     ]);
+
+        # CSV-Datei schreiben (UTF-8, Semikolon als Trenner)
+    with open(filename, mode="w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f, delimiter=";")
+        writer.writerow(header)
+        writer.writerows(rows)

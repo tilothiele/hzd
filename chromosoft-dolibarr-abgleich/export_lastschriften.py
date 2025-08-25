@@ -1,21 +1,23 @@
 from models.dolibarr_member import DolibarrMember,mussZahlen
-from models.dolibarr_actions import find_by_soc, find_all
+from models.dolibarr_actions import find_by_soc, find_all, per_lastschrift, create_subscription, get_subscriptions
 import datetime
-import csv
 import uuid
 import os
 import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
 
 # -----------------------------------------------------------------
-# Liest die Datei Lastschriften_IBAN_Datum.csv
 # Hold alle aktiven Mitglieder von Dolibarr
+# Filtert alle raus, die nicht zahlen (müssen)
 # Schreibt auf stdout die Lastschriftdatensätze als csv
+# Erstellt eine Lastschrift-XML (SEPA)
+# Verlängert die Mitgliedschaft -> Erstellt einen neuen Eintrag mit dem Betrag und vom 1.1. bis 31.12.
 # -----------------------------------------------------------------
 
 def dolibarrKey(m: DolibarrMember):
     return m.firstname + " " + m.lastname
 
+# Ermittelt den Jahresbeitrag
 def typeid2Beitrag(typeid) -> float:
     if typeid=="1":
         return 138
@@ -33,6 +35,17 @@ def typeid2Beitrag(typeid) -> float:
         return 0
 #        return "Kurzmitglied"
     raise
+
+# Wird eine Verlängerung benötigt?
+# Ja, falls es keine Subscription gibt, deren Endzeitpunkt in der Zukunft liegt
+def need_subscription(m: DolibarrMember) -> bool:
+    subscriptions = get_subscriptions(m)
+    for s in subscriptions:
+        bis = s.datef
+        n = int(datetime.datetime.now().timestamp())
+        if bis > n:
+            return False
+    return True
 
 def dolibarrKey(m: DolibarrMember):
     return m.firstname + " " + m.lastname
@@ -153,23 +166,31 @@ if __name__ == '__main__':
     buchungstext = "HZD OG-Hamburg Mitgliedsbeitrag "+datetime.datetime.now().strftime("%Y")
     print("iban,betrag,kontoinhaber,mandat_vom,buchungstext,Mandatsreferenz")
     for p in dolibarr_liste_sorted:
+        name = p.firstname+" "+p.lastname
         if not mussZahlen(p):
+            print(f"{name} muss nicht zahlen")
             continue
-#        print(p.id, p.firstname)
-# Isabell
-        if p.id != "182":
+        if not per_lastschrift(p):
+            print(f"{name} zahlt nicht per Lastschrift")
+            continue
+        if not need_subscription(p):
+            print(f"{name} hat offenbar (noch) eine gültige Mitgliedschaft")
             continue
         bank_account = None
         if p.fk_soc:
             bank_accounts = find_by_soc(p.fk_soc)
-            bank_account = bank_accounts[0]
+            if(bank_accounts and len(bank_accounts)>0):
+                bank_account = bank_accounts[0]
         if bank_account == None:
+            print(f"{name} hat kein Bankkonto")
             continue
         kontoinhaber = bank_account.proprio
         b = typeid2Beitrag(p.typeid)
         dr = datetime.datetime.fromtimestamp(bank_account.date_rum)
-        bt = buchungstext+" "+p.type+" "+p.firstname+" "+p.lastname
-        print(bank_account.iban+","+str(b)+","+bank_account.proprio+","+dr.strftime("%d.%m.%Y")+","+bt+","+bank_account.rum)
+        bt = buchungstext+" "+p.type+" "+name
+
+        print(f"Ziehe {b} Euro für {name} vom Konto {bank_account.iban} ({bank_account.proprio}) ein.")
+        #print(bank_account.iban+","+str(b)+","+bank_account.proprio+","+dr.strftime("%d.%m.%Y")+","+bt+","+bank_account.rum)
 
         amount = float(b)
         tx_total += amount
@@ -206,6 +227,8 @@ if __name__ == '__main__':
         if(len(bt)!=len(bt1)):
             print("gekürzt "+bt1)
         ET.SubElement(rmt_inf, "Ustrd").text = bt1
+
+        create_subscription(p, b, datetime.datetime.now().year)
 
     # Gruppensummen nachtragen
     grp_hdr.find("NbOfTxs").text = str(tx_count)

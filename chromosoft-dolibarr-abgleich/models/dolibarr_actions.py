@@ -1,9 +1,10 @@
 import requests
 from typing import List
-from models.dolibarr_member import DolibarrMember, BankAccount
+from models.dolibarr_member import DolibarrMember, BankAccount, Category, Subscription
 from dotenv import load_dotenv
 import os
 import json
+import datetime
 
 def set_mitgliedsnummer(member: DolibarrMember, nr):
     data = {
@@ -145,6 +146,60 @@ def find_by_soc(soc_id) -> List[BankAccount]:
 
     raise
 
+def per_lastschrift(p):
+    categories = find_categories_by_member(p.id);
+    for c in categories:
+        if(c.id=='3'): # Zahlungspflichtig per Lastschrift
+            return True;
+    return False
+
+def find_categories_by_member(member_id) -> List[Category]:
+    url = f"/api/index.php/members/{member_id}/categories"
+
+    # GET-Request an Dolibarr
+    response = getDolibarApiResponse(url, None)
+
+    # Antwort prüfen
+    if response.status_code == 200:
+        data = response.json()
+        return [Category.from_json(item) for item in data]
+    if response.status_code == 404:
+        return []
+
+    raise
+
+def year_bounds(year: int):
+    # 1. Januar 00:00:00
+    start = datetime.datetime(year, 1, 1, 12, 0, 0)
+    # 31. Dezember 23:59:59
+    end = datetime.datetime(year, 12, 31, 23, 59, 59)
+
+    return int(start.timestamp()), int(end.timestamp())
+
+def create_subscription(m: DolibarrMember, b: float, jahr: int):
+    load_dotenv()
+    host = os.getenv('DOLIBARR_HOST')
+    api_key = os.getenv('DOLIBARR_API_KEY')
+    url = f"{host}/api/index.php/members/{m.id}/subscriptions"
+    headers = {
+        'DOLAPIKEY': api_key,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+
+    start_ts, end_ts = year_bounds(jahr)
+
+    data = {
+        "end_date": end_ts,
+        "start_date": start_ts,
+        "amount": b,
+        "label": f"Mitgliedsbeitrag {jahr}",
+    }
+
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    response.raise_for_status()
+
+    return
 
 def find_all() -> List[DolibarrMember]:
     url = "/api/index.php/members"
@@ -196,6 +251,18 @@ def find_by_name(vorname, nachname) -> DolibarrMember:
                 print("Mehredutiges Mitglied")
                 raise
             return daten[0]
+    return None
+
+def get_subscriptions(m: DolibarrMember) -> List[Subscription]:
+    # API-Endpunkt
+    url = f"/api/index.php/members/{m.id}/subscriptions"
+    params = None
+    response = getDolibarApiResponse(url, params)
+    # Antwort prüfen
+    if response.status_code == 200:
+        data = response.json()
+        return [Subscription.from_json(item) for item in data]
+
     return None
 
 def getDolibarApiResponse(url: str, params):

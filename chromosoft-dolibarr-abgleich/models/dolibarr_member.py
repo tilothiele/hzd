@@ -8,6 +8,28 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path='../.env')
 
 @dataclass
+class Subscription:
+    id: str
+    datef: Optional[int]
+    dateh: Optional[int]
+    fk_type: Optional[str]
+    fk_adherent: Optional[str]
+    amount: float
+    note_public: str
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> "Subscription":
+        return cls(
+            id=data.get("id"),
+            datef=int(data["datef"]) if data.get("datef") else None,
+            dateh=int(data["dateh"]) if data.get("dateh") else None,
+            fk_type=data.get("fk_type"),
+            fk_adherent=data.get("fk_adherent"),
+            amount=float(data.get("amount", 0)),
+            note_public=data.get("note_public", "")
+        )
+
+@dataclass
 class DolibarrMember:
     id: str
     entity: str
@@ -78,6 +100,60 @@ def optional_str(dict, name):
     if dict==None:
         return None
     return dict.get(name)
+
+class Category:
+    def __init__(
+        self,
+        id: str,
+        fk_parent: int,
+        label: str,
+        description: str,
+        color: str,
+        position: str,
+        socid: int,
+        ref_ext: Optional[str],
+        visible: int,
+        type_: str,
+        entity: int,
+        array_options: List[Any],
+    ):
+        self.id = id
+        self.fk_parent = fk_parent
+        self.label = label
+        self.description = description
+        self.color = color
+        self.position = position
+        self.socid = socid
+        self.ref_ext = ref_ext
+        self.visible = visible
+        self.type = type_
+        self.entity = entity
+        self.array_options = array_options
+
+    def __repr__(self):
+        return f"Category(id={self.id}, label='{self.label}', type={self.type})"
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> "Category":
+        """
+        Erzeugt eine Category-Instanz aus einem JSON-String oder einem dict.
+        """
+        if isinstance(data, str):
+            data = json.loads(data)
+        return cls(
+            id=data.get("id"),
+            fk_parent=data.get("fk_parent"),
+            label=data.get("label"),
+            description=data.get("description", ""),
+            color=data.get("color", ""),
+            position=data.get("position"),
+            socid=data.get("socid"),
+            ref_ext=data.get("ref_ext"),
+            visible=data.get("visible"),
+            type_=data.get("type"),
+            entity=data.get("entity"),
+            array_options=data.get("array_options", []),
+        )
 
 class BankAccount:
     def __init__(self, id, label, bank, bic, iban, socid, datec, default_rib, rum, frstrecur, datem, proprio, date_rum):
