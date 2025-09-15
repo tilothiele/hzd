@@ -3,6 +3,9 @@ import os
 from com.sun.star.beans import PropertyValue
 from pathlib import Path
 
+uno_host = os.getenv("UNO_HOST", "localhost")
+uno_port = os.getenv("UNO_PORT", "2002")
+
 def replace_placeholders(doc, replacements):
     # Zugriff auf alle Textbereiche im Dokument
     text = doc.Text
@@ -23,9 +26,9 @@ def convert_odt_to_pdf(input_path, output_path, replacements):
         "com.sun.star.bridge.UnoUrlResolver", local_context
     )
     
-    context = resolver.resolve(
-        "uno:socket,host=localhost,port=2002;urp;StarOffice.ComponentContext"
-    )
+    url = f"uno:socket,host={uno_host},port={uno_port};urp;StarOffice.ComponentContext"
+    print(url)
+    context = resolver.resolve(url)
     
     desktop = context.ServiceManager.createInstanceWithContext(
         "com.sun.star.frame.Desktop", context

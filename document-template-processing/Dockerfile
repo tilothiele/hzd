@@ -5,7 +5,7 @@ FROM ubuntu:24.04
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libreoffice-core libreoffice-writer libreoffice-calc \
-    python3 python3-pip python3-uno \
+    python3 python3-venv python3-pip python3-uno \
 #    uno-libs3 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -18,7 +18,9 @@ COPY requirements.txt .
 
 # Hier unotools hinzufügen
 # requirements.txt sollte mindestens enthalten: unotools
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN python3 -m venv venv && \
+    . venv/bin/activate && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Dein Skript kopieren
 COPY . .
