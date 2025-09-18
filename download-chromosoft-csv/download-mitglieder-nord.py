@@ -2,14 +2,33 @@ import re
 from playwright.sync_api import Playwright, sync_playwright, expect
 from dotenv import load_dotenv
 import os
+import requests
 
 load_dotenv()
+
+def ntfy(channel, message, sign):
+    # Ziel-URL
+    url = f"https://ntfy.emsgmbh-tt-homeoffice.srv64.de/{channel}"
+
+    # Nachricht (du kannst auch f-Strings nutzen, wenn du eine Variable wie count einsetzen willst)
+#    count = 3
+#    message = f"ems-gitlab Backup Abbruch: Es laufen bereits {count} rsync-Prozesse."
+
+    # Header definieren (wie bei curl: -H "X-Tags: stop_sign")
+
+    headers = {
+        "X-Tags": sign
+    }
+
+    # POST-Request absenden
+    response = requests.post(url, data=message.encode("utf-8"), headers=headers)
+
 
 username = os.getenv("CHROMOSOFT_USERNAME")
 password = os.getenv("CHROMOSOFT_PASSWORD")
 
 def run(playwright: Playwright) -> None:
-    browser = playwright.chromium.launch(headless=True)
+    browser = playwright.chromium.launch(headless=False)
     context = browser.new_context(ignore_https_errors=True)
     page = context.new_page()
     page.goto("https://hzd.chromosoft.com/login")
@@ -44,3 +63,4 @@ def run(playwright: Playwright) -> None:
 
 with sync_playwright() as playwright:
     run(playwright)
+    ntfy("hzd", "chromosoft Mitglieder abgeglichen", "ok")
