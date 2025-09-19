@@ -15,6 +15,7 @@ load_dotenv()
 
 conn = mysql.connector.connect(
     host=os.getenv('AUTOMATION_DB_HOST'),
+    port=os.getenv('AUTOMATION_DB_PORT'),
     user=os.getenv('AUTOMATION_USERNAME'),
     password=os.getenv('AUTOMATION_PASSWORD'),
     database=os.getenv('AUTOMATION_DB_NAME')
