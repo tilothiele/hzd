@@ -22,6 +22,7 @@ interface FormData {
   hundGeschlecht: string;
   hundVersicherung: string;
   hundVersNr: string;
+  kontoinhaber: string;
   mitgliedschaft: string[];
   kurzzeitVon: string;
   kurzzeitBis: string;
@@ -29,13 +30,14 @@ interface FormData {
   sepaIban: string;
   sepaBic: string;
   sepaKreditinstitut: string;
+  weitereMitteilungen: string;
 }
 
 export default function AntragForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [requestId, setRequestId] = useState<string>('');
   const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
-  
+
   // Debug: Log requestId when it changes
   useEffect(() => {
     if (requestId) {
@@ -64,17 +66,19 @@ export default function AntragForm() {
     mitgliedschaft: [],
     kurzzeitVon: "",
     kurzzeitBis: "",
+    kontoinhaber: "",
     sepaName: "",
     sepaIban: "",
     sepaBic: "",
     sepaKreditinstitut: "",
-
+    weitereMitteilungen: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
   const [savedFormData, setSavedFormData] = useState<FormData | null>(null);
+  const [useAntragstellerAsKontoinhaber, setUseAntragstellerAsKontoinhaber] = useState(false);
 
   // Initiale Validierung beim Laden der Komponente
   useEffect(() => {
@@ -108,6 +112,19 @@ export default function AntragForm() {
     }, 100);
   };
 
+  const handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setUseAntragstellerAsKontoinhaber(checked);
+
+    // Wenn Checkbox aktiviert wird, leere nur das Kontoinhaber-Feld
+    if (checked) {
+      setFormData(prev => ({
+        ...prev,
+        sepaName: ""
+      }));
+    }
+  };
+
   const validateFormWithData = (data: FormData): { isValid: boolean; errors: Record<string, string> } => {
     const newErrors: Record<string, string> = {};
 
@@ -133,6 +150,31 @@ export default function AntragForm() {
     if (!data.mitgliedschaft || data.mitgliedschaft.length === 0) {
       newErrors.mitgliedschaft = "Bitte wählen Sie eine Mitgliedschaftsart";
       console.log('Mitgliedschaft not selected');
+    }
+
+    // SEPA-Felder validieren
+    // Kontoinhaber validieren - entweder sepaName oder vorname+name
+    const ermittelterKontoinhaber = useAntragstellerAsKontoinhaber
+      ? `${data.vorname} ${data.name}`
+      : data.sepaName;
+
+    if (!ermittelterKontoinhaber || !ermittelterKontoinhaber.trim()) {
+      newErrors.sepaName = "Kontoinhaber ist erforderlich";
+      console.log('Kontoinhaber missing or empty');
+    }
+
+    // IBAN, BIC und Kreditinstitut werden immer validiert
+    if (!data.sepaIban || !data.sepaIban.trim()) {
+      newErrors.sepaIban = "IBAN ist erforderlich";
+      console.log('SEPA IBAN missing or empty');
+    }
+    if (!data.sepaBic || !data.sepaBic.trim()) {
+      newErrors.sepaBic = "BIC ist erforderlich";
+      console.log('SEPA BIC missing or empty');
+    }
+    if (!data.sepaKreditinstitut || !data.sepaKreditinstitut.trim()) {
+      newErrors.sepaKreditinstitut = "Kreditinstitut ist erforderlich";
+      console.log('SEPA Kreditinstitut missing or empty');
     }
 
     console.log('Validation errors found:', Object.keys(newErrors).length);
@@ -224,6 +266,17 @@ export default function AntragForm() {
     const currentRequestId = uuidv4();
     setRequestId(currentRequestId);
 
+    // Kontoinhaber ermitteln
+    const ermittelterKontoinhaber = useAntragstellerAsKontoinhaber
+      ? `${formData.vorname} ${formData.name}`
+      : formData.sepaName;
+
+    // FormData mit ermitteltem Kontoinhaber erstellen
+    const formDataMitKontoinhaber = {
+      ...formData,
+      kontoinhaber: ermittelterKontoinhaber
+    };
+
     try {
       // REST-Endpoint aufrufen
       const response = await fetch('/api/submit-application', {
@@ -235,7 +288,7 @@ export default function AntragForm() {
         body: JSON.stringify({
           requestId: currentRequestId,
           timestamp: new Date().toISOString(),
-          formData: formData
+          formData: formDataMitKontoinhaber
         })
       });
 
@@ -245,9 +298,9 @@ export default function AntragForm() {
 
       const result = await response.json();
       console.log("Formular erfolgreich gesendet:", result);
-      
+
       // Speichere die Daten für die PDF-Generierung
-      setSavedFormData({ ...formData });
+      setSavedFormData({ ...formDataMitKontoinhaber });
       setShowSuccessDialog(true);
 
       // Reset form
@@ -273,15 +326,17 @@ export default function AntragForm() {
         mitgliedschaft: [],
         kurzzeitVon: "",
         kurzzeitBis: "",
+        kontoinhaber: "",
         sepaName: "",
         sepaIban: "",
         sepaBic: "",
         sepaKreditinstitut: "",
-
+        weitereMitteilungen: "",
       });
       setErrors({});
       setIsFormValid(false); // Button nach Reset deaktivieren
       setRequestId(''); // Reset Request ID after successful submission
+      setUseAntragstellerAsKontoinhaber(false); // Reset Checkbox
     } catch (error) {
       console.error("Fehler beim Senden:", error);
       alert("Es gab einen Fehler beim Senden des Antrags. Bitte versuchen Sie es erneut.");
@@ -353,7 +408,7 @@ export default function AntragForm() {
                       value={formData.vorname}
                       placeholder="Ihr Vorname"
                       onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
                         errors.vorname ? 'border-red-500' : 'border-gray-300'
                       }`}
                       data-error={!!errors.vorname}
@@ -370,7 +425,7 @@ export default function AntragForm() {
                       value={formData.name}
                       placeholder="Ihr Nachname"
                       onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
                         errors.name ? 'border-red-500' : 'border-gray-300'
                       }`}
                       data-error={!!errors.name}
@@ -387,7 +442,7 @@ export default function AntragForm() {
                       type="date"
                       value={formData.geburtsdatum}
                       onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
                         errors.geburtsdatum ? 'border-red-500' : 'border-gray-300'
                       }`}
                       data-error={!!errors.geburtsdatum}
@@ -407,7 +462,7 @@ export default function AntragForm() {
                       value={formData.strasse}
                       placeholder="Musterstraße 123"
                       onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
                         errors.strasse ? 'border-red-500' : 'border-gray-300'
                       }`}
                       data-error={!!errors.strasse}
@@ -424,7 +479,7 @@ export default function AntragForm() {
                       value={formData.plz}
                       placeholder="20095"
                       onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
                         errors.plz ? 'border-red-500' : 'border-gray-300'
                       }`}
                       data-error={!!errors.plz}
@@ -441,7 +496,7 @@ export default function AntragForm() {
                       value={formData.ort}
                       placeholder="Hamburg"
                       onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
                         errors.ort ? 'border-red-500' : 'border-gray-300'
                       }`}
                       data-error={!!errors.ort}
@@ -461,7 +516,7 @@ export default function AntragForm() {
                       value={formData.telefon}
                       placeholder="+49 40 12345678"
                       onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
                         errors.telefon ? 'border-red-500' : 'border-gray-300'
                       }`}
                       data-error={!!errors.telefon}
@@ -479,7 +534,7 @@ export default function AntragForm() {
                       value={formData.email}
                       placeholder="ihre.email@beispiel.de"
                       onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
                         errors.email ? 'border-red-500' : 'border-gray-300'
                       }`}
                       data-error={!!errors.email}
@@ -500,7 +555,7 @@ export default function AntragForm() {
                     name="mitgliedschaftVDH"
                     placeholder="Bestehende VDH Mitgliedschaften"
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   />
                 </div>
               </div>
@@ -811,17 +866,35 @@ export default function AntragForm() {
                 </div>
               </div>
 
+              {/* Checkbox für Kontoinhaber */}
+              <div className="mb-6">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useAntragstellerAsKontoinhaber}
+                    onChange={handleCheckboxChange}
+                    className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Kontoinhaber ist identisch mit Antragsteller
+                  </span>
+                </label>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <label className="block text-sm font-medium text-gray-700">Kontoinhaber *</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Kontoinhaber {!useAntragstellerAsKontoinhaber && '*'}
+                  </label>
                   <input
                     name="sepaName"
-                    value={formData.sepaName}
-                    placeholder="Name des Kontoinhabers"
+                    value={useAntragstellerAsKontoinhaber ? `${formData.vorname} ${formData.name}` : formData.sepaName}
+                    placeholder={useAntragstellerAsKontoinhaber ? `${formData.vorname} ${formData.name}` : "Name des Kontoinhabers"}
                     onChange={handleChange}
+                    disabled={useAntragstellerAsKontoinhaber}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
                       errors.sepaName ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    } ${useAntragstellerAsKontoinhaber ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     data-error={!!errors.sepaName}
                   />
                   {errors.sepaName && (
@@ -898,6 +971,21 @@ export default function AntragForm() {
                     Alternativ können Sie zur Unterschrift bei nächster Gelegenheit im Vereinshaus in Hamburg-Billwerder vorbeikommen.
                 </p>
               </div>
+            </div>
+
+            {/* Weitere Mitteilungen */}
+            <div className="mb-8">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Weitere Mitteilungen
+              </label>
+              <textarea
+                name="weitereMitteilungen"
+                value={formData.weitereMitteilungen}
+                onChange={handleChange}
+                placeholder="Hier können Sie zusätzliche Informationen oder Mitteilungen eingeben..."
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 resize-none"
+              />
             </div>
 
             {/* Buttons */}

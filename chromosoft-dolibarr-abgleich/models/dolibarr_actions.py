@@ -102,6 +102,14 @@ def setze_bankverbindung(member: DolibarrMember, iban, bic):
     response.raise_for_status()
     return
 
+def set_hzd_mitglied_seit(m: DolibarrMember, v: int):
+    put_member(member=m, data={
+        "array_options": {
+            "options_hzd_mitglied_seit": str(v)
+        }
+    })
+    return
+
 def patch_bank_account(soc_id, bank_id, patch_data):
     load_dotenv()
     host = os.getenv('DOLIBARR_HOST')

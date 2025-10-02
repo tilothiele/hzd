@@ -34,20 +34,20 @@ export async function POST(request: NextRequest) {
     // Logo (oben rechts)
     try {
       // Logo als Base64 laden
-      
+
       // Absoluten Pfad zum Logo erstellen
       const absoluteLogoPath = path.join(process.cwd(), 'public', 'logo.png');
-      
+
       if (fs.existsSync(absoluteLogoPath)) {
         const logoBuffer = fs.readFileSync(absoluteLogoPath);
         const logoBase64 = logoBuffer.toString('base64');
-        
+
         // Logo in PDF einbetten (20x20mm)
         const logoWidth = 20;
         const logoHeight = 20;
         const logoX = pageWidth - margin - logoWidth;
         const logoY = yPosition - 15;
-        
+
         pdf.addImage(`data:image/png;base64,${logoBase64}`, 'PNG', logoX, logoY, logoWidth, logoHeight);
       } else {
         // Fallback: Hund-Emoji wenn Logo nicht gefunden
@@ -237,11 +237,6 @@ export async function POST(request: NextRequest) {
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(0, 0, 0);
 
-    yPosition = addWrappedText('Datum: _________________', 10, yPosition, contentWidth);
-    yPosition += 5;
-    yPosition = addWrappedText('Unterschrift: _________________', 10, yPosition, contentWidth);
-    yPosition += 5;
-
     // Abschnitt 3: Mitgliedschaft
     checkNewPage();
     addSection(
@@ -270,7 +265,7 @@ export async function POST(request: NextRequest) {
     addSection(
       '4. SEPA-Lastschriftmandat',
       {
-        'Kontoinhaber': formData.sepaName,
+        'Kontoinhaber': formData.kontoinhaber,
         'Kreditinstitut': formData.sepaKreditinstitut,
         'IBAN': formData.sepaIban,
         'BIC': formData.sepaBic
@@ -288,6 +283,23 @@ export async function POST(request: NextRequest) {
     yPosition += 5;
     yPosition = addWrappedText('Unterschrift: _________________', 10, yPosition, contentWidth);
     yPosition += 5;
+
+    // Weitere Mitteilungen (nur wenn ausgefüllt)
+    if (formData.weitereMitteilungen && formData.weitereMitteilungen.trim()) {
+      checkNewPage();
+      yPosition += 10;
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      yPosition = addWrappedText('Weitere Mitteilungen:', 10, yPosition, contentWidth);
+      yPosition += 5;
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      const mitteilungenLines = pdf.splitTextToSize(formData.weitereMitteilungen, contentWidth);
+      pdf.text(mitteilungenLines, margin, yPosition);
+      yPosition += mitteilungenLines.length * 4 + 10;
+    }
 
     // PDF als Buffer zurückgeben
     const pdfBuffer = pdf.output('arraybuffer');
