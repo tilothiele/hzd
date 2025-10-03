@@ -7,6 +7,7 @@ Ein potentielles Mitglied stellt online einen Antrag auf Mitgliedschaft in der O
 - Im Backend geschieht die Validierung gegen die Dolibarr API
 - Wenn die Angaben valide sind, gibt das System dem Antragsteller sofort ein PDF aus.
 - Parallel wird ein PDF per Mail an die Geschäftsstelle und dem Antragsteller geschickt.
+- Im Entwurfsordner des Emailkonto der Geschäftsstelle wird ein Bestätigungs- bzw. Begrüßungsmail gelegt.
 
 ## Validierung
 
