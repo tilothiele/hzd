@@ -61,10 +61,6 @@ export const getMembershipTypeById = (id: string): MembershipType | undefined =>
   return MEMBERSHIP_TYPES.find(type => type.id === id);
 };
 
-export const getMembershipTypesByCategory = (category: MembershipType['category']): MembershipType[] => {
-  return MEMBERSHIP_TYPES.filter(type => type.category === category);
-};
-
 export const getMembershipTypesRequiringDateRange = (): MembershipType[] => {
   return MEMBERSHIP_TYPES.filter(type => type.requiresDateRange);
 };
@@ -91,14 +87,6 @@ export const MEMBERSHIP_PERIODS = MEMBERSHIP_TYPES.reduce((acc, type) => {
   acc[type.id] = type.period;
   return acc;
 }, {} as Record<string, string>);
-
-// Kategorien
-export const MEMBERSHIP_CATEGORIES = {
-  FULL: 'full',
-  LOCAL: 'local',
-  SHORT_TERM: 'short-term',
-  FAMILY: 'family'
-} as const;
 
 // Familienmitgliedschaft Hinweis
 export const FAMILY_MEMBERSHIP_NOTE = 'Familienmitglied kann werden, wer in häuslicher Gemeinschaft mit einem OG-Vollmitglied lebt.';

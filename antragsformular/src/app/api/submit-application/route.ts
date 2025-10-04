@@ -1,56 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getApplicationService } from '../../../services/applicationService';
+import { ApplicationSubmissionRequest } from '../../../types/api';
 
-// In-Memory storage for processed request IDs (in production, use a database)
-const processedRequests = new Set<string>();
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { requestId, timestamp, formData } = body;
-    const requestIdHeader = request.headers.get('X-Request-ID');
+    const { formData, uuid } = await req.json();
 
-    // Validierung der UUID
-    if (!requestId || !requestIdHeader || requestId !== requestIdHeader) {
+    if (!formData) {
       return NextResponse.json(
-        { error: 'Invalid or missing request ID' },
+        { success: false, message: 'FormData ist erforderlich' },
         { status: 400 }
       );
     }
 
-    // Prüfe auf Doppelrequests
-    if (processedRequests.has(requestId)) {
+    if (!uuid) {
       return NextResponse.json(
-        { error: 'Duplicate request detected', requestId },
-        { status: 409 }
+        { success: false, message: 'UUID ist erforderlich' },
+        { status: 400 }
       );
     }
 
-    // Markiere Request als verarbeitet
-    processedRequests.add(requestId);
+    // ApplicationService verwenden
+    const applicationService = getApplicationService();
 
-    // Hier würde die eigentliche Verarbeitung der Formulardaten stattfinden
-    // z.B. Speicherung in Datenbank, E-Mail-Versand, etc.
-    console.log('Processing application:', {
-      requestId,
-      timestamp,
-      formData
-    });
+    // FormData validieren
+    const validation = applicationService.validateFormData(formData);
+    if (!validation.isValid) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Validierungsfehler',
+          errors: validation.errors
+        },
+        { status: 400 }
+      );
+    }
 
-    // Simuliere Verarbeitungszeit
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Antragsanmeldung speichern
+    const request: ApplicationSubmissionRequest = {
+      formData,
+      uuid
+    };
+    const result = await applicationService.submitApplication(request);
 
-    // Erfolgreiche Antwort
-    return NextResponse.json({
-      success: true,
-      requestId,
-      message: 'Application submitted successfully',
+    if (!result.success) {
+      const statusCode = result.message.includes('bereits') ? 409 : 400;
+      return NextResponse.json(result, { status: statusCode });
+    }
+
+    console.log('Antragsanmeldung erfolgreich gespeichert:', {
+      uuid: result.uuid,
+      email: result.email,
       timestamp: new Date().toISOString()
     });
 
+    return NextResponse.json(result);
+
   } catch (error) {
-    console.error('Error processing application:', error);
+    console.error('Fehler bei der Antragsanmeldung:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, message: 'Interner Serverfehler' },
       { status: 500 }
     );
   }

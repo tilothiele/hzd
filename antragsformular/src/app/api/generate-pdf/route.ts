@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
 
-    var hundGeschlecht = '';
+    let hundGeschlecht = '';
     if (formData.hundGeschlecht === 'männlich') {
       hundGeschlecht = 'Rüde';
     }

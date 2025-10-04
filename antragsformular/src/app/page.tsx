@@ -1,39 +1,11 @@
 "use client"
 
-import { useState, ChangeEvent, FormEvent, useRef, useEffect } from "react";
+import { useState, ChangeEvent, FormEvent, useRef, useEffect, useCallback } from "react";
+import Image from 'next/image';
 import { v4 as uuidv4 } from 'uuid';
 import { testFormData, testKurzzeitMitglied, testFamilienMitglied } from '../../test-data';
-import { MEMBERSHIP_TYPES, getMembershipTypesByCategory, FAMILY_MEMBERSHIP_NOTE } from '../constants/membership-types';
-
-interface FormData {
-  name: string;
-  vorname: string;
-  geburtsdatum: string;
-  strasse: string;
-  plz: string;
-  ort: string;
-  email: string;
-  telefon: string;
-  mitgliedschaftVDH: string;
-  hundName: string;
-  hundZwinger: string;
-  hundZuchtbuch: string;
-  hundChip: string;
-  hundWurfdatum: string;
-  hundRasse: string;
-  hundGeschlecht: string;
-  hundVersicherung: string;
-  hundVersNr: string;
-  kontoinhaber: string;
-  mitgliedschaft: string; // Jetzt ein einzelner string mit MembershipType.id
-  kurzzeitVon: string;
-  kurzzeitBis: string;
-  sepaName: string;
-  sepaIban: string;
-  sepaBic: string;
-  sepaKreditinstitut: string;
-  weitereMitteilungen: string;
-}
+import { MEMBERSHIP_TYPES } from '../constants/membership-types';
+import { FormData } from '../types/formData';
 
 export default function AntragForm() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -82,12 +54,6 @@ export default function AntragForm() {
   const [savedFormData, setSavedFormData] = useState<FormData | null>(null);
   const [useAntragstellerAsKontoinhaber, setUseAntragstellerAsKontoinhaber] = useState(false);
 
-  // Initiale Validierung beim Laden der Komponente
-  useEffect(() => {
-    const validationResult = validateFormWithData(formData);
-    setIsFormValid(validationResult.isValid);
-  }, [formData]);
-
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -127,7 +93,7 @@ export default function AntragForm() {
     }
   };
 
-  const validateFormWithData = (data: FormData): { isValid: boolean; errors: Record<string, string> } => {
+  const validateFormWithData = useCallback((data: FormData): { isValid: boolean; errors: Record<string, string> } => {
     const newErrors: Record<string, string> = {};
 
     console.log('Validating form data:', data);
@@ -183,7 +149,13 @@ export default function AntragForm() {
     console.log('Errors:', newErrors);
 
     return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
-  };
+  }, [useAntragstellerAsKontoinhaber]);
+
+  // Initiale Validierung beim Laden der Komponente - nach validateFormWithData definiert
+  useEffect(() => {
+    const validationResult = validateFormWithData(formData);
+    setIsFormValid(validationResult.isValid);
+  }, [formData, validateFormWithData]);
 
   const validateForm = (): { isValid: boolean; errors: Record<string, string> } => {
     return validateFormWithData(formData);
@@ -320,12 +292,10 @@ export default function AntragForm() {
       const response = await fetch('/api/submit-application', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-Request-ID': currentRequestId
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          requestId: currentRequestId,
-          timestamp: new Date().toISOString(),
+          uuid: currentRequestId,
           formData: formDataMitKontoinhaber
         })
       });
@@ -337,9 +307,13 @@ export default function AntragForm() {
       const result = await response.json();
       console.log("Formular erfolgreich gesendet:", result);
 
-      // Speichere die Daten für die PDF-Generierung
-      setSavedFormData({ ...formDataMitKontoinhaber });
-      setShowSuccessDialog(true);
+      if (result.success) {
+        // Speichere die Daten für die PDF-Generierung
+        setSavedFormData({ ...formDataMitKontoinhaber });
+        setShowSuccessDialog(true);
+      } else {
+        throw new Error(result.message || 'Unbekannter Fehler');
+      }
 
       // Reset form
       setFormData({
@@ -392,10 +366,13 @@ export default function AntragForm() {
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
             {/* Logo */}
             <div className="flex justify-center mb-6">
-              <img
+              <Image
                 src="/logo.png"
                 alt="HZD Logo"
-                className="w-24 h-24 object-contain"
+                width={96}
+                height={96}
+                className="object-contain"
+                priority
               />
             </div>
 
