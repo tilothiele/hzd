@@ -1,6 +1,6 @@
-Ein potentielles Mitglied stellt online einen Antrag auf Mitgliedschaft in der OG.
-
 # Onboarding-Prozess
+
+Ein potentielles Mitglied (Antragsteller) stellt online einen Antrag auf Mitgliedschaft in der OG.
 
 - Der Antragsteller füllt online das Antragsformular aus
 - Vor dem Abschicken werden die Angaben validiert. Dies geschieht auf Feldebene im Browser.

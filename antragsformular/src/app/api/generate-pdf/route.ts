@@ -8,76 +8,75 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { formData } = body;
 
+    console.log(formData);
+
     // PDF erstellen
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 20;
+    const margin = 15;
     const contentWidth = pageWidth - 2 * margin;
     let yPosition = margin;
 
-    // Adresse (links)
+    // Header: Adresse links, Logo rechts
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(0, 0, 0);
+
+    // Adresse links
     const addressLines = [
-      'HZD Ortsgruppe Hamburg u.U.',
+      'HZD OG Hamburg u.U.',
       'Tilo Thiele',
-      'Geschäftsstelle',
       'Anne-Becker-Ring 8',
-      '21031 Hamburg'
+      '21031 Hamburg',
+      'geschaeftsstelle@hzd-og-hamburg.de'
     ];
     addressLines.forEach((line, index) => {
-      pdf.text(line, margin, yPosition + (index * 4));
+      pdf.text(line, margin, yPosition + (index * 3.5));
     });
 
-    // Logo (oben rechts)
+    // Logo rechts
     try {
-      // Logo als Base64 laden
-
-      // Absoluten Pfad zum Logo erstellen
       const absoluteLogoPath = path.join(process.cwd(), 'public', 'logo.png');
-
       if (fs.existsSync(absoluteLogoPath)) {
         const logoBuffer = fs.readFileSync(absoluteLogoPath);
         const logoBase64 = logoBuffer.toString('base64');
-
-        // Logo in PDF einbetten (20x20mm)
-        const logoWidth = 20;
-        const logoHeight = 20;
+        const logoWidth = 25;
+        const logoHeight = 25;
         const logoX = pageWidth - margin - logoWidth;
-        const logoY = yPosition - 15;
-
+        const logoY = yPosition;
         pdf.addImage(`data:image/png;base64,${logoBase64}`, 'PNG', logoX, logoY, logoWidth, logoHeight);
-      } else {
-        // Fallback: Hund-Emoji wenn Logo nicht gefunden
-        pdf.setFontSize(24);
-        pdf.setTextColor(59, 130, 246); // Blue-600
-        const logoX = pageWidth - margin - 10;
-        pdf.text('🐕', logoX, yPosition);
       }
     } catch (error) {
       console.error('Fehler beim Laden des Logos:', error);
-      // Fallback: Hund-Emoji
-      pdf.setFontSize(24);
-      pdf.setTextColor(59, 130, 246); // Blue-600
-      const logoX = pageWidth - margin - 10;
-      pdf.text('🐕', logoX, yPosition);
     }
+
+    // Website rechts vertikal
+    pdf.setFontSize(12);
+    const yPosLogo = yPosition + 50;
+    pdf.text('www.hovawart', pageWidth - 6, yPosLogo, { angle: 90 });
+    const w1 = pdf.getTextWidth('www.hovawart');
+    pdf.setTextColor(255,0,0);
+    pdf.text('e', pageWidth - 6, yPosLogo - w1, { angle: 90 });
+    pdf.setTextColor(0,0,0);
+    const w2 = pdf.getTextWidth('e');
+    pdf.text('.com', pageWidth - 6, yPosLogo-w1-w2, { angle: 90 });
 
     yPosition += 25;
 
-    // Titel
-    pdf.setFontSize(20);
-    pdf.setTextColor(0, 0, 0);
+    // Haupttitel
+    pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('HZD Ortsgruppen-Aufnahmeantrag', pageWidth / 2, yPosition, { align: 'center' });
+    pdf.text('Ortsgruppen-Aufnahmeantrag für OG Hamburg Billwerder', margin, yPosition);
     yPosition += 10;
 
-    pdf.setFontSize(16);
+    // Einleitungstext
+    pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('OG Hamburg und Umgebung', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 20;
+    const introText = 'Hiermit beantrage ich in Anerkennung der Satzung, Ordnungen und Beschlüsse der HZD die Mitgliedschaft in der Hovawart Zuchtgemeinschaft Deutschland e.V.. Ich gehöre keinem kynologischen Verein außerhalb des Verbandes für das Deutsche Hundewesen (VDH) bzw. außerhalb der Fédération Cynologique Internationale (FCI) an. Ich bestätige, dass ich aus keinem anderen VDH-Verein ausgeschlossen wurde und dass gegen mich kein Ausschlussverfahren läuft. Ich bin weder gewerbsmäßiger Hundehändler/-züchter noch Hundeverkaufsvermittler.';
+    const introLines = pdf.splitTextToSize(introText, contentWidth);
+    pdf.text(introLines, margin, yPosition);
+    yPosition += introLines.length * 4 + 4;
 
     // Funktion zum Formatieren des Datums
     const formatDate = (dateString: string) => {
@@ -90,216 +89,216 @@ export async function POST(request: NextRequest) {
       return `${day}.${month}.${year}`;
     };
 
-    // Funktion zum Hinzufügen von Text mit Zeilenumbruch
-    const addWrappedText = (text: string, fontSize: number, y: number, maxWidth: number) => {
-      pdf.setFontSize(fontSize);
-      const lines = pdf.splitTextToSize(text, maxWidth);
-      pdf.text(lines, margin, y);
-      return y + (lines.length * fontSize * 0.4);
-    };
+    // Antragsteller-Sektion
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Antragsteller', margin, yPosition);
+    yPosition += 8;
 
-    // Funktion zum Hinzufügen eines Abschnitts
-    const addSection = (title: string, data: Record<string, string>, loremText: string, useTable: boolean = false) => {
-      // Abschnittstitel
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(59, 130, 246); // Blue-600
-      pdf.text(title, margin, yPosition);
-      yPosition += 8;
+    // Antragsteller-Felder in Tabellenformat
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
 
-      // Lorem Ipsum Text
-      yPosition = addWrappedText(loremText, 10, yPosition, contentWidth);
-      yPosition += 5;
+    const fields = [
+      { label: 'Name:', value: `${formData.vorname} ${formData.name}` },
+      { label: 'Straße:', value: `${formData.strasse}` },
+      { label: 'Ort:', value: `${formData.plz} ${formData.ort}` },
+      { label: 'Geb.-Datum:', value: formatDate(formData.geburtsdatum) },
+      { label: 'E-Mail:', value: formData.email },
+      { label: 'Telefon:', value: formData.telefon }
+    ];
 
-      // Formulardaten
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(0, 0, 0);
+    // Zwei Spalten
+    const colWidth = (contentWidth - 10) / 2;
+    const leftCol = fields.slice(0, Math.ceil(fields.length / 2));
+    const rightCol = fields.slice(Math.ceil(fields.length / 2));
 
-      if (useTable) {
-        // Tabellarische Darstellung (zweispaltig)
-        const entries = Object.entries(data).filter(([, value]) => value && value.trim());
-        const halfLength = Math.ceil(entries.length / 2);
-        const leftColumn = entries.slice(0, halfLength);
-        const rightColumn = entries.slice(halfLength);
+    // Linke Spalte
+    leftCol.forEach((field, index) => {
+      const x = margin;
+      const y = yPosition + (index * 6);
+      pdf.text(`${field.value || '_________________'}`, x, y);
+    });
 
-        const columnWidth = contentWidth / 2 - 10;
-        const leftX = margin;
-        const rightX = margin + contentWidth / 2 + 10;
+    // Rechte Spalte
+    rightCol.forEach((field, index) => {
+      const x = margin + colWidth + 10;
+      const y = yPosition + (index * 6);
+      pdf.text(`${field.label} ${field.value || '_________________'}`, x, y);
+    });
 
-        // Linke Spalte
-        leftColumn.forEach(([key, value]) => {
-          const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(`${label}:`, leftX, yPosition);
-          pdf.setFont('helvetica', 'normal');
-          const valueLines = pdf.splitTextToSize(value, columnWidth - 30);
-          pdf.text(valueLines, leftX + 30, yPosition);
-          yPosition += Math.max(valueLines.length * 4, 6);
-        });
+    yPosition += Math.max(leftCol.length, rightCol.length) * 6 + 2;
 
-        // Rechte Spalte (neue Y-Position für rechte Spalte)
-        let rightYPosition = yPosition - (leftColumn.length * 6);
-        rightColumn.forEach(([key, value]) => {
-          const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(`${label}:`, rightX, rightYPosition);
-          pdf.setFont('helvetica', 'normal');
-          const valueLines = pdf.splitTextToSize(value, columnWidth - 30);
-          pdf.text(valueLines, rightX + 30, rightYPosition);
-          rightYPosition += Math.max(valueLines.length * 4, 6);
-        });
+    // VDH Mitgliedschaften
+    pdf.text('Ich bin/war bereits Mitglied in folgenden kynologischen Verbänden oder Vereinen des VDH:', margin, yPosition);
+    yPosition += 5;
+    pdf.text(formData.mitgliedschaftVDH || '________________________________________________', margin, yPosition);
+    yPosition += 10;
 
-        // Verwende die höhere Y-Position
-        yPosition = Math.max(yPosition, rightYPosition);
-      } else {
-        // Normale Darstellung (einspaltig)
-        Object.entries(data).forEach(([key, value]) => {
-          if (value && value.trim()) {
-            const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
-            const text = `${label}: ${value}`;
-            yPosition = addWrappedText(text, 10, yPosition, contentWidth);
-            yPosition += 2;
-          }
-        });
-      }
+    // Hund-Sektion
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Hund (keine Übernahme der Daten in die HZD-Datenbank oder das HZD-Zuchtbuch/Register)', margin, yPosition);
+    yPosition += 8;
 
-      yPosition += 10;
-    };
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
 
-    // Prüfe ob neue Seite nötig
-    const checkNewPage = () => {
-      if (yPosition > pageHeight - 50) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-    };
-
-    // Abschnitt 1: Antragsteller
-    checkNewPage();
-    addSection(
-      '1. Antragsteller',
-      {
-        'Vorname': formData.vorname,
-        'Nachname': formData.name,
-        'Geburtsdatum': formatDate(formData.geburtsdatum),
-        'Straße': formData.strasse,
-        'PLZ': formData.plz,
-        'Ort': formData.ort,
-        'Telefon': formData.telefon,
-        'E-Mail': formData.email
-      },
-      'Hiermit beantrage ich in Anerkennung der Satzung, Ordnungen und Beschlüsse der HZD die Mitgliedschaft in der Ortsgruppe Hamburg u.U. der Hovawart '
-      +'Zuchtgemeinschaft Deutschland e.V.. Ich gehöre keinem kynologischen Verein außerhalb des Verbandes für das Deutsche Hundewesen '
-      +'(VDH) bzw. außerhalb der Fédération Cynologique Internationale (FCI) an. Ich bestätige, dass ich aus keinem anderen VDH-Verein '
-      +'ausgeschlossen wurde und dass gegen mich kein Ausschlussverfahren läuft. Ich bin weder gewerbsmäßiger Hundehändler/-züchter noch '
-      +'Hundeverkaufsvermittler.',
-      true // Tabellarische Darstellung
-    );
-
-    // VDH Mitgliedschaften über gesamte Breite
-    if (formData.mitgliedschaftVDH && formData.mitgliedschaftVDH.trim()) {
-      yPosition += 5;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 0, 0);
-      pdf.text('Ich bin/war bereits Mitglied in folgenden kynologischen Verbänden oder Vereinen des VDH:', margin, yPosition);
-      yPosition += 5;
-
-      pdf.setFont('helvetica', 'normal');
-      const vdhLines = pdf.splitTextToSize(formData.mitgliedschaftVDH, contentWidth);
-      pdf.text(vdhLines, margin, yPosition);
-      yPosition += vdhLines.length * 4 + 5;
+    var hundGeschlecht = '';
+    if (formData.hundGeschlecht === 'männlich') {
+      hundGeschlecht = 'Rüde';
+    }
+    if (formData.hundGeschlecht === 'weiblich') {
+      hundGeschlecht = 'Hündin';
     }
 
-    // Abschnitt 2: Hund
-    checkNewPage();
-    addSection(
-      '2. Hund',
-      {
-        'Name': formData.hundName,
-        'Zwinger': formData.hundZwinger,
-        'Zuchtbuchnummer': formData.hundZuchtbuch,
-        'Chip-Nr.': formData.hundChip,
-        'Wurfdatum': formatDate(formData.hundWurfdatum),
-        'Rasse': formData.hundRasse,
-        'Geschlecht': formData.hundGeschlecht,
-        'Haftpflichtvers.': formData.hundVersicherung,
-        'Vers.nr.': formData.hundVersNr
-      },
-      'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
-      true // Tabellarische Darstellung
-    );
+    // Hund-Felder
+    const hundFields = [
+      { label: 'Name:', value: formData.hundName },
+      { label: 'Zwingername:', value: formData.hundZwinger },
+      { label: 'Zuchtbuchnr.:', value: formData.hundZuchtbuch },
+      { label: 'Wurfdatum:', value: formatDate(formData.hundWurfdatum) },
+      { label: 'Rasse:', value: formData.hundRasse },
+      { label: 'Haftpflichtversicherung:', value: formData.hundVersicherung },
+      { label: 'Nr.:', value: formData.hundVersNr },
+      { label: 'Geschlect:', value: hundGeschlecht },
+      { label: 'Chipnr.:', value: formData.hundChip }
+    ];
 
-    // Datum und Unterschrift nach Abschnitt 2
-    yPosition += 5;
+    // Hund-Felder in zwei Spalten
+    const hundLeftCol = hundFields.slice(0, Math.ceil(hundFields.length / 2));
+    const hundRightCol = hundFields.slice(Math.ceil(hundFields.length / 2));
+
+    hundLeftCol.forEach((field, index) => {
+      const x = margin;
+      const y = yPosition + (index * 5);
+      pdf.text(`${field.label} ${field.value || '_________________'}`, x, y);
+    });
+
+    hundRightCol.forEach((field, index) => {
+      const x = margin + colWidth + 10;
+      const y = yPosition + (index * 5);
+      pdf.text(`${field.label} ${field.value || '_________________'}`, x, y);
+    });
+
+    yPosition += Math.max(hundLeftCol.length, hundRightCol.length) * 5 + 5;
+
+    // Mitgliedschaften-Sektion
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Ortsgruppen-Mitgliedschaften ', margin, yPosition);
+    yPosition += 8;
+
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(0, 0, 0);
 
-    // Abschnitt 3: Mitgliedschaft
-    checkNewPage();
-    addSection(
-      '3. Mitgliedschaft',
-      {
-        'Gewählte Mitgliedschaft': formData.mitgliedschaft.join(', '),
-        'Kurzzeit von': formData.kurzzeitVon,
-        'Kurzzeit bis': formData.kurzzeitBis
-      },
-      'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.'
-    );
+    const v = formatDate(formData.kurzzeitVon) || '_________________';
+    const b = formatDate(formData.kurzzeitBis) || '_________________';
 
-    // Datum und Unterschrift nach Abschnitt 3 (nur Labels)
-    yPosition += 5;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(0, 0, 0);
+    const memberships = [
+      { m_type: 'Vollmitglied', label: 'Ortsgruppenmitglied mit HZD Vollmitgliedschaft', price: '31,00 €', period: 'jährlich' },
+      { m_type: 'OG-Mitglied', label: 'Ortsgruppenmitglied', price: '138,00 €', period: 'jährlich' },
+      { m_type: 'Kurzzeitmitgliedschaft', label: `Kurzmitgliedschaft von: ${v} bis: ${b}`, price: '11,50 €', period: 'monatlich' },
+      { m_type: 'Familienmitgliedschaft', label: 'Ortsgruppenfamilienmitglied ohne HZD Familienmitgliedschaft', price: '16,00 €', period: 'jährlich' },
+      { m_type: 'HZD-Familienmitglied', label: 'Ortsgruppenfamilienmitglied mit HZD Familienmitgliedschaft', price: '16,00 €', period: 'jährlich' }
+    ];
 
-    yPosition = addWrappedText('Datum: _________________', 10, yPosition, contentWidth);
-    yPosition += 5;
-    yPosition = addWrappedText('Unterschrift: _________________', 10, yPosition, contentWidth);
-    yPosition += 5;
+    memberships.forEach((membership, index) => {
+      // Checkbox
+      const isSelected = formData.mitgliedschaft == membership.m_type;
+      if (isSelected) {
+        pdf.rect(margin, yPosition - 3, 3, 3);
+        pdf.text('X', margin + 0.5, yPosition - 0.5);
+        // Text
+        pdf.text(membership.label, margin + 8, yPosition);
+        pdf.text(membership.period, margin + contentWidth - 40, yPosition);
+        pdf.text(membership.price, margin + contentWidth - 20, yPosition);
+        yPosition += 5;
+      }
 
-    // Abschnitt 4: SEPA
-    checkNewPage();
-    addSection(
-      '4. SEPA-Lastschriftmandat',
-      {
-        'Kontoinhaber': formData.kontoinhaber,
-        'Kreditinstitut': formData.sepaKreditinstitut,
-        'IBAN': formData.sepaIban,
-        'BIC': formData.sepaBic
-      },
-      'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.'
-    );
+    });
 
-    // Datum und Unterschrift nach Abschnitt 4 (nur Labels)
-    yPosition += 5;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(0, 0, 0);
-
-    yPosition = addWrappedText('Datum: _________________', 10, yPosition, contentWidth);
-    yPosition += 5;
-    yPosition = addWrappedText('Unterschrift: _________________', 10, yPosition, contentWidth);
     yPosition += 5;
 
-    // Weitere Mitteilungen (nur wenn ausgefüllt)
-    if (formData.weitereMitteilungen && formData.weitereMitteilungen.trim()) {
-      checkNewPage();
+    // Familienmitglied Hinweis
+    if (formData.mitgliedschaft.includes('Familie')) {
+      pdf.setFontSize(9);
+      pdf.text('Familienmitglied kann werden, wer in häuslicher Gemeinschaft mit einem OG-Vollmitglied lebt.', margin, yPosition);
       yPosition += 10;
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 0, 0);
-      yPosition = addWrappedText('Weitere Mitteilungen:', 10, yPosition, contentWidth);
-      yPosition += 5;
-
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      const mitteilungenLines = pdf.splitTextToSize(formData.weitereMitteilungen, contentWidth);
-      pdf.text(mitteilungenLines, margin, yPosition);
-      yPosition += mitteilungenLines.length * 4 + 10;
     }
+
+    // Datenschutz-Sektion
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Datenschutzrechtliche Einverständniserklärung', margin, yPosition);
+    yPosition += 8;
+
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    const datenschutzText = 'Ich bin damit einverstanden, dass obenstehende Angaben für vereinsinterne Zwecke der HZD in einer elektronischen Datenverarbeitung gespeichert und verarbeitet und an Regionalgruppen der HZD bei Bedarf bekanntgegeben werden. Eine darüber hinausgehende Weitergabe der Daten findet nicht statt. Ich bin damit einverstanden, dass die HZD vereinsinterne Post (Einladungen, Infos etc.) an die genannte E-Mail-Adresse senden darf.';
+    const datenschutzLines = pdf.splitTextToSize(datenschutzText, contentWidth);
+    pdf.text(datenschutzLines, margin, yPosition);
+    yPosition += datenschutzLines.length * 4 + 4;
+
+    // Datum und Unterschrift
+    pdf.text('Datum: _________________', margin, yPosition);
+    pdf.text('Unterschrift: _________________', margin + 80, yPosition);
+    yPosition += 8;
+
+    // SEPA-Sektion
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('SEPA-Lastschriftmandat', margin, yPosition);
+    yPosition += 4;
+
+    // SEPA Text
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const sepaText = 'Ich ermächtige die Hovawart Zuchtgemeinschaft Deutschland, den Mitgliedsbeitrag mittels Lastschrift einzuziehen. Zugleich weise ich mein Kreditinstitut an, die von der Hovawart Zuchtgemeinschaft auf mein Konto gezogenen Lastschriften einzulösen. Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, die Erstattung des belasteten Betrages verlangen. Es gelten dabei die mit meinem Kreditinstitut vereinbarten Bedingungen. Gläubiger-Identifikationsnummer: DE79 ZZZO 0000 5154 60. Mandatsreferenz ist die Mitgliedsnummer (wird separat mitgeteilt).';
+    const sepaLines = pdf.splitTextToSize(sepaText, contentWidth);
+    pdf.text(sepaLines, margin, yPosition);
+    yPosition += sepaLines.length * 4 + 4;
+
+    // SEPA Felder
+    const sepaFields = [
+      { label: 'Kontoinhaber:', value: `${formData.vorname} ${formData.name}` },
+      { label: 'Anschrift:', value: `${formData.strasse}, ${formData.plz} ${formData.ort}` },
+      { label: 'Kreditinstitut:', value: formData.sepaKreditinstitut },
+      { label: 'IBAN:', value: formData.sepaIban },
+      { label: 'BIC:', value: formData.sepaBic }
+    ];
+
+    // SEPA-Felder in zwei Spalten
+    const sepaLeftCol = sepaFields.slice(0, Math.ceil(sepaFields.length / 2));
+    const sepaRightCol = sepaFields.slice(Math.ceil(sepaFields.length / 2));
+
+    sepaLeftCol.forEach((field, index) => {
+      const x = margin;
+      const y = yPosition + (index * 5);
+      pdf.text(`${field.label} ${field.value || '_________________'}`, x, y);
+    });
+
+    sepaRightCol.forEach((field, index) => {
+      const x = margin + colWidth + 10;
+      const y = yPosition + (index * 5);
+      pdf.text(`${field.label} ${field.value || '_________________'}`, x, y);
+    });
+
+    yPosition += Math.max(sepaLeftCol.length, sepaRightCol.length) * 5 + 3;
+
+    // SEPA Hinweis
+    pdf.setFontSize(9);
+    pdf.text('Falls Kontoinhaber abweichend vom Antragsteller: Dieses SEPA-Lastschriftmandat gilt für die Mitgliedschaft des Antragstellers.', margin, yPosition);
+    yPosition += 10;
+
+    // Ort, Datum und Unterschrift
+    pdf.text('Ort, Datum: _________________', margin, yPosition);
+    pdf.text('Unterschrift: _________________', margin + 80, yPosition);
+    yPosition += 15;
+
+    // Footer
+    pdf.setFontSize(8);
+    pdf.text('HZD Formular 040-01 Seite 1 von 1', pageWidth - margin - 40, pageHeight - margin + 10);
 
     // PDF als Buffer zurückgeben
     const pdfBuffer = pdf.output('arraybuffer');
@@ -313,9 +312,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error generating PDF:', error);
+    console.error('Fehler bei der PDF-Generierung:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Fehler bei der PDF-Generierung' },
       { status: 500 }
     );
   }

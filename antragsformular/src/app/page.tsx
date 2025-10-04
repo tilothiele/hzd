@@ -2,6 +2,8 @@
 
 import { useState, ChangeEvent, FormEvent, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from 'uuid';
+import { testFormData, testKurzzeitMitglied, testFamilienMitglied } from '../../test-data';
+import { MEMBERSHIP_TYPES, getMembershipTypesByCategory, FAMILY_MEMBERSHIP_NOTE } from '../constants/membership-types';
 
 interface FormData {
   name: string;
@@ -224,6 +226,42 @@ export default function AntragForm() {
     } catch (error) {
       console.error('Fehler beim Generieren des PDFs:', error);
       alert('Fehler beim Generieren des PDFs. Bitte versuchen Sie es erneut.');
+    }
+  };
+
+  const generateTestPDF = async (testData: FormData, testName: string) => {
+    console.log(`Generating PDF with test data: ${testName}`, testData);
+
+    try {
+      // Serverseitige PDF-Generierung mit Test-Daten
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formData: testData
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // PDF als Blob herunterladen
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `HZD-Test-${testName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Fehler beim Generieren des Test-PDFs:', error);
+      alert('Fehler beim Generieren des Test-PDFs. Bitte versuchen Sie es erneut.');
     }
   };
 
@@ -734,61 +772,32 @@ export default function AntragForm() {
                     <p className="text-sm text-red-600">{errors.mitgliedschaft}</p>
                   </div>
                 )}
-                <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="radio"
-                    name="mitgliedschaft"
-                    value="HZD Vollmitgliedschaft"
-                    onChange={handleChange}
-                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <div>
-                    <label className="text-sm font-medium text-gray-900">HZD Vollmitgliedschaft</label>
-                    <p className="text-sm text-gray-600">35 € jährlich</p>
-                  </div>
-                </div>
 
-                <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="radio"
-                    name="mitgliedschaft"
-                    value="HZD Familienmitglied"
-                    onChange={handleChange}
-                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <div>
-                    <label className="text-sm font-medium text-gray-900">HZD Familienmitglied</label>
-                    <p className="text-sm text-gray-600">16 € jährlich</p>
+                {/* Dynamische Mitgliedschaftsoptionen aus Konstanten */}
+                {MEMBERSHIP_TYPES.map((membershipType) => (
+                  <div key={membershipType.id} className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="mitgliedschaft"
+                      value={membershipType.id}
+                      onChange={handleChange}
+                      className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <div className="flex-1">
+                      <label className="text-sm font-medium text-gray-900">
+                        {membershipType.label}
+                      </label>
+                      <p className="text-sm text-gray-600">
+                        {membershipType.price} {membershipType.period}
+                      </p>
+                      {membershipType.description && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {membershipType.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="radio"
-                    name="mitgliedschaft"
-                    value="Ortsgruppenmitglied"
-                    onChange={handleChange}
-                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <div>
-                    <label className="text-sm font-medium text-gray-900">Ortsgruppenmitglied</label>
-                    <p className="text-sm text-gray-600">138 € jährlich</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="radio"
-                    name="mitgliedschaft"
-                    value="OG Familienmitglied"
-                    onChange={handleChange}
-                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <div>
-                    <label className="text-sm font-medium text-gray-900">OG Familienmitglied</label>
-                    <p className="text-sm text-gray-600">16 € jährlich</p>
-                  </div>
-                </div>
+                ))}
 
 
 
@@ -991,7 +1000,6 @@ export default function AntragForm() {
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
 
-
               <button
                 type="submit"
                 disabled={!isFormValid || isSubmitting}
@@ -1010,6 +1018,31 @@ export default function AntragForm() {
                 ) : (
                   'Weiter'
                 )}
+              </button>
+            </div>
+
+            {/* Test Buttons */}
+            <div className="mt-4 flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => generateTestPDF(testFormData, "Vollmitglied")}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+              >
+                Test1: Vollmitglied
+              </button>
+              <button
+                type="button"
+                onClick={() => generateTestPDF(testKurzzeitMitglied, "Kurzzeit")}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+              >
+                Test2: Kurzzeit
+              </button>
+              <button
+                type="button"
+                onClick={() => generateTestPDF(testFamilienMitglied, "Familie")}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+              >
+                Test3: Familie
               </button>
             </div>
           </form>
