@@ -130,6 +130,19 @@ class ApplicationService {
   }
 
   /**
+   * Löscht eine Antragsanmeldung anhand der ID
+   */
+  async deleteApplicationById(id: number): Promise<boolean> {
+    try {
+      await this.db.deleteApplicationById(id);
+      return true;
+    } catch (error) {
+      console.error('Fehler beim Löschen der Antragsanmeldung:', error);
+      return false;
+    }
+  }
+
+  /**
    * Prüft ob eine Antragsanmeldung mit der gegebenen E-Mail existiert
    */
   async applicationExists(email: string): Promise<boolean> {
@@ -164,23 +177,23 @@ class ApplicationService {
     for (const field of requiredFields) {
       const value = (formData as unknown as Record<string, unknown>)[field];
       if (!value || !value.toString().trim()) {
-        errors.push(`Feld '${field}' ist erforderlich`);
+        errors.push(`${field}:Feld ist erforderlich`);
       }
     }
 
     // E-Mail-Format prüfen
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.push('Ungültige E-Mail-Adresse');
+      errors.push('email:Ungültige E-Mail-Adresse');
     }
 
     // PLZ prüfen (5-stellig)
     if (formData.plz && !/^\d{5}$/.test(formData.plz)) {
-      errors.push('PLZ muss 5-stellig sein');
+      errors.push('plz:PLZ muss 5-stellig sein');
     }
 
     // IBAN prüfen (vereinfacht)
     if (formData.sepaIban && !/^[A-Z]{2}\d{2}[A-Z0-9]+$/.test(formData.sepaIban.replace(/\s/g, ''))) {
-      errors.push('Ungültige IBAN');
+      errors.push('sepaIban:Ungültige IBAN');
     }
 
     return {

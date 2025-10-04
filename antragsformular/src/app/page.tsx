@@ -53,6 +53,7 @@ export default function AntragForm() {
   const [isFormValid, setIsFormValid] = useState(false);
   const [savedFormData, setSavedFormData] = useState<FormData | null>(null);
   const [useAntragstellerAsKontoinhaber, setUseAntragstellerAsKontoinhaber] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -156,6 +157,16 @@ export default function AntragForm() {
     const validationResult = validateFormWithData(formData);
     setIsFormValid(validationResult.isValid);
   }, [formData, validateFormWithData]);
+
+  // Auto-hide Toast nach 5 Sekunden
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const validateForm = (): { isValid: boolean; errors: Record<string, string> } => {
     return validateFormWithData(formData);
@@ -271,6 +282,7 @@ export default function AntragForm() {
     }
 
     setIsSubmitting(true);
+    setToast(null); // Toast zurücksetzen
 
     // Generiere UUID für diesen Request
     const currentRequestId = uuidv4();
@@ -300,19 +312,73 @@ export default function AntragForm() {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const result = await response.json();
-      console.log("Formular erfolgreich gesendet:", result);
+      console.log("API Response:", result);
 
       if (result.success) {
-        // Speichere die Daten für die PDF-Generierung
+        // Erfolgreiche Übermittlung
         setSavedFormData({ ...formDataMitKontoinhaber });
         setShowSuccessDialog(true);
+        setToast({ message: 'Antrag erfolgreich übermittelt!', type: 'success' });
       } else {
-        throw new Error(result.message || 'Unbekannter Fehler');
+        // Backend-Validierungsfehler anzeigen
+        if (result.errors && Array.isArray(result.errors)) {
+          // Erste Fehlermeldung als Toast anzeigen (ohne Feldname)
+          const firstError = result.errors[0];
+          const toastMessage = firstError.includes(':') ? firstError.split(':', 2)[1] : firstError;
+          setToast({ message: toastMessage, type: 'error' });
+
+          // Konvertiere Backend-Errors zu Frontend-Errors
+          const backendErrors: Record<string, string> = {};
+          result.errors.forEach((error: string) => {
+            // Prüfe auf Feldname:Fehlermeldung Format
+            if (error.includes(':')) {
+              const [fieldName, message] = error.split(':', 2);
+              backendErrors[fieldName] = message;
+            } else {
+              // Fallback für alte Format ohne Feldname
+              if (error.includes("'vorname'")) {
+                backendErrors.vorname = "Vorname ist erforderlich";
+              } else if (error.includes("'name'")) {
+                backendErrors.name = "Nachname ist erforderlich";
+              } else if (error.includes("Ungültige E-Mail")) {
+                backendErrors.email = "Ungültige E-Mail-Adresse";
+              } else if (error.includes("'email'")) {
+                backendErrors.email = "E-Mail ist erforderlich";
+              } else if (error.includes("'strasse'")) {
+                backendErrors.strasse = "Straße ist erforderlich";
+              } else if (error.includes("5-stellig")) {
+                backendErrors.plz = "PLZ muss 5-stellig sein";
+              } else if (error.includes("'plz'")) {
+                backendErrors.plz = "PLZ ist erforderlich";
+              } else if (error.includes("'ort'")) {
+                backendErrors.ort = "Ort ist erforderlich";
+              } else if (error.includes("'hundName'")) {
+                backendErrors.hundName = "Name des Hundes ist erforderlich";
+              } else if (error.includes("'mitgliedschaft'")) {
+                backendErrors.mitgliedschaft = "Bitte wählen Sie eine Mitgliedschaftsart";
+              } else if (error.includes("Ungültige IBAN")) {
+                backendErrors.sepaIban = "Ungültige IBAN";
+              } else if (error.includes("'sepaIban'")) {
+                backendErrors.sepaIban = "IBAN ist erforderlich";
+              } else if (error.includes("'sepaBic'")) {
+                backendErrors.sepaBic = "BIC ist erforderlich";
+              } else if (error.includes("'sepaKreditinstitut'")) {
+                backendErrors.sepaKreditinstitut = "Kreditinstitut ist erforderlich";
+              } else {
+                // Allgemeine Fehlermeldung
+                console.error('Unbekannter Backend-Fehler:', error);
+              }
+            }
+          });
+          setErrors(backendErrors);
+        } else {
+          // Allgemeine Fehlermeldung als Toast
+          setToast({ message: result.message || 'Unbekannter Fehler', type: 'error' });
+          setErrors({ general: result.message || 'Unbekannter Fehler' });
+        }
+        setIsSubmitting(false);
+        return; // Nicht weiter mit Reset
       }
 
       // Reset form
@@ -351,9 +417,9 @@ export default function AntragForm() {
       setUseAntragstellerAsKontoinhaber(false); // Reset Checkbox
     } catch (error) {
       console.error("Fehler beim Senden:", error);
-      alert("Es gab einen Fehler beim Senden des Antrags. Bitte versuchen Sie es erneut.");
+      setToast({ message: 'Fehler beim Senden des Formulars. Bitte versuchen Sie es erneut.', type: 'error' });
+      setErrors({ general: 'Fehler beim Senden des Formulars. Bitte versuchen Sie es erneut.' });
       setRequestId(''); // Reset Request ID on error
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -382,6 +448,13 @@ export default function AntragForm() {
             <p className="text-xl text-blue-600 font-semibold">
               OG Hamburg und Umgebung
             </p>
+
+            {/* Allgemeine Fehlermeldungen */}
+            {errors.general && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{errors.general}</p>
+              </div>
+            )}
             <p className="text-l text-blue-600">
               Mittlerer Landweg 74a, 21033 Hamburg
             </p>
@@ -953,7 +1026,7 @@ export default function AntragForm() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-sm text-red-800">
                   <strong>Hinweis:</strong> Die Daten werden elektronisch an die Geschäftsstelle der HZD OG Hamburg Billwerder übermittelt.
-                    Der Antrag wird erst gültig, wenn er in Papierform und unterschrieben vorliegt. Sie können ihren unterschriebenen per Post an die o.a. Adresse schicken.
+                    Der Antrag wird erst gültig, wenn er in Papierform und unterschrieben vorliegt. Sie können ihren unterschriebenen Mitgliedsantrag per Post an die o.a. Adresse schicken.
                     Alternativ können Sie zur Unterschrift bei nächster Gelegenheit im Vereinshaus in Hamburg-Billwerder vorbeikommen.
                 </p>
               </div>
@@ -1071,10 +1144,34 @@ export default function AntragForm() {
 
               {/* Close Button */}
               <button
-                onClick={() => setShowSuccessDialog(false)}
+                onClick={() => {
+                  setShowSuccessDialog(false);
+                  setIsSubmitting(false); // Reset submitting state when closing dialog
+                }}
                 className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200"
               >
                 Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Component */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className={`px-6 py-4 rounded-lg shadow-lg max-w-md ${
+            toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : 'bg-green-500 text-white'
+          }`}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">{toast.message}</p>
+              <button
+                onClick={() => setToast(null)}
+                className="ml-4 text-white hover:text-gray-200"
+              >
+                ✕
               </button>
             </div>
           </div>

@@ -5,6 +5,7 @@ import path from 'path';
 const DB_PATH = path.join(process.cwd(), 'data', 'applications.db');
 
 export interface ApplicationRecord {
+  id: number;
   email: string;
   creationDate: string;
   uuid: string;
@@ -49,7 +50,8 @@ class DatabaseService {
 
       const createTableSQL = `
         CREATE TABLE IF NOT EXISTS applications (
-          email VARCHAR(100) PRIMARY KEY,
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email VARCHAR(100) NOT NULL,
           creationDate DATETIME DEFAULT CURRENT_TIMESTAMP,
           uuid VARCHAR(20) NOT NULL,
           payload TEXT NOT NULL
@@ -57,6 +59,7 @@ class DatabaseService {
       `;
 
       const createIndexSQL = `
+        CREATE INDEX IF NOT EXISTS idx_applications_email ON applications(email);
         CREATE INDEX IF NOT EXISTS idx_applications_creation_date ON applications(creationDate);
         CREATE INDEX IF NOT EXISTS idx_applications_uuid ON applications(uuid);
       `;
@@ -89,7 +92,7 @@ class DatabaseService {
       }
 
       const sql = `
-        INSERT OR REPLACE INTO applications (email, uuid, payload, creationDate)
+        INSERT INTO applications (email, uuid, payload, creationDate)
         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
       `;
 
@@ -185,6 +188,27 @@ class DatabaseService {
           return;
         }
         console.log(`Anwendung gelöscht: ${email} (${this.changes} Zeilen betroffen)`);
+        resolve();
+      });
+    });
+  }
+
+  async deleteApplicationById(id: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error('Datenbank nicht initialisiert'));
+        return;
+      }
+
+      const sql = 'DELETE FROM applications WHERE id = ?';
+
+      this.db.run(sql, [id], function(err) {
+        if (err) {
+          console.error('Fehler beim Löschen der Anwendung:', err);
+          reject(err);
+          return;
+        }
+        console.log(`Anwendung gelöscht: ID ${id} (${this.changes} Zeilen betroffen)`);
         resolve();
       });
     });
