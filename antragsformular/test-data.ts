@@ -21,7 +21,7 @@ export interface FormData {
   hundVersicherung: string;
   hundVersNr: string;
   kontoinhaber: string;
-  mitgliedschaft: string[];
+  mitgliedschaft: string;
   kurzzeitVon: string;
   kurzzeitBis: string;
   sepaName: string;
@@ -52,7 +52,7 @@ export const testFormData: FormData = {
   hundVersicherung: "Allianz",
   hundVersNr: "VERS-789456",
   kontoinhaber: "Max Mustermann",
-  mitgliedschaft: ["Vollmitglied"],
+  mitgliedschaft: "HZD Vollmitgliedschaft",
   kurzzeitVon: "",
   kurzzeitBis: "",
   sepaName: "Max Mustermann",
@@ -83,7 +83,7 @@ export const testKurzzeitMitglied: FormData = {
   hundVersicherung: "HUK-Coburg",
   hundVersNr: "HUK-456789",
   kontoinhaber: "Anna Schmidt",
-  mitgliedschaft: ["Kurzzeitmitgliedschaft"],
+  mitgliedschaft: "Kurzzeitmitglied",
   kurzzeitVon: "2024-01-01",
   kurzzeitBis: "2024-12-31",
   sepaName: "Anna Schmidt",
@@ -114,7 +114,7 @@ export const testFamilienMitglied: FormData = {
   hundVersicherung: "Allianz",
   hundVersNr: "ALL-789012",
   kontoinhaber: "Maria Weber",
-  mitgliedschaft: ["Familienmitgliedschaft"],
+  mitgliedschaft: "OG Familienmitglied",
   kurzzeitVon: "",
   kurzzeitBis: "",
   sepaName: "Maria Weber",
@@ -145,7 +145,7 @@ export const testJugendMitglied: FormData = {
   hundVersicherung: "HUK-Coburg",
   hundVersNr: "HUK-246810",
   kontoinhaber: "Peter Klein",
-  mitgliedschaft: ["Jugendmitgliedschaft"],
+  mitgliedschaft: "HZD Familienmitglied",
   kurzzeitVon: "",
   kurzzeitBis: "",
   sepaName: "",
@@ -170,7 +170,7 @@ export function generateRandomTestData(): FormData {
   const hundeNamen = ["Bella", "Luna", "Rex", "Bruno", "Asta", "Max", "Luna", "Rex"];
   const rassen = ["Hovawart", "Deutscher Schäferhund", "Labrador", "Golden Retriever"];
   const geschlechter = ["männlich", "weiblich"];
-  const mitgliedschaften = ["Vollmitglied", "Kurzzeitmitgliedschaft", "Familienmitgliedschaft", "Jugendmitgliedschaft"];
+  const mitgliedschaften = ["HZD Vollmitgliedschaft", "Kurzzeitmitglied", "OG Familienmitglied", "HZD Familienmitglied"];
   
   const randomName = names[Math.floor(Math.random() * names.length)];
   const randomVorname = vornamen[Math.floor(Math.random() * vornamen.length)];
@@ -199,9 +199,9 @@ export function generateRandomTestData(): FormData {
     hundVersicherung: "Allianz",
     hundVersNr: `VERS-${Math.floor(Math.random() * 999999)}`,
     kontoinhaber: `${randomVorname} ${randomName}`,
-    mitgliedschaft: [randomMitgliedschaft],
-    kurzzeitVon: randomMitgliedschaft === "Kurzzeitmitgliedschaft" ? "2024-01-01" : "",
-    kurzzeitBis: randomMitgliedschaft === "Kurzzeitmitgliedschaft" ? "2024-12-31" : "",
+    mitgliedschaft: randomMitgliedschaft,
+    kurzzeitVon: randomMitgliedschaft === "Kurzzeitmitglied" ? "2024-01-01" : "",
+    kurzzeitBis: randomMitgliedschaft === "Kurzzeitmitglied" ? "2024-12-31" : "",
     sepaName: `${randomVorname} ${randomName}`,
     sepaIban: "DE89370400440532013000",
     sepaBic: "COBADEFFXXX",

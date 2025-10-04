@@ -25,7 +25,7 @@ interface FormData {
   hundVersicherung: string;
   hundVersNr: string;
   kontoinhaber: string;
-  mitgliedschaft: string[];
+  mitgliedschaft: string; // Jetzt ein einzelner string mit MembershipType.id
   kurzzeitVon: string;
   kurzzeitBis: string;
   sepaName: string;
@@ -65,7 +65,7 @@ export default function AntragForm() {
     hundGeschlecht: "",
     hundVersicherung: "",
     hundVersNr: "",
-    mitgliedschaft: [],
+    mitgliedschaft: "",
     kurzzeitVon: "",
     kurzzeitBis: "",
     kontoinhaber: "",
@@ -95,7 +95,7 @@ export default function AntragForm() {
 
     let updatedFormData;
     if (type === "radio") {
-      updatedFormData = { ...formData, mitgliedschaft: [value] };
+      updatedFormData = { ...formData, mitgliedschaft: value };
     } else {
       updatedFormData = { ...formData, [name]: value };
     }
@@ -149,7 +149,7 @@ export default function AntragForm() {
       newErrors.hundName = "Name des Hundes ist erforderlich";
       console.log('Hund name missing or empty');
     }
-    if (!data.mitgliedschaft || data.mitgliedschaft.length === 0) {
+    if (!data.mitgliedschaft || !data.mitgliedschaft.trim()) {
       newErrors.mitgliedschaft = "Bitte wählen Sie eine Mitgliedschaftsart";
       console.log('Mitgliedschaft not selected');
     }
@@ -361,7 +361,7 @@ export default function AntragForm() {
         hundGeschlecht: "",
         hundVersicherung: "",
         hundVersNr: "",
-        mitgliedschaft: [],
+        mitgliedschaft: "",
         kurzzeitVon: "",
         kurzzeitBis: "",
         kontoinhaber: "",

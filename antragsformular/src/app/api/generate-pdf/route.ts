@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import jsPDF from 'jspdf';
 import fs from 'fs';
 import path from 'path';
+import { MEMBERSHIP_TYPE_HZD_VOLLMITGLIED,
+  MEMBERSHIP_TYPE_OG_MITGLIED,
+  MEMBERSHIP_TYPE_OG_FAMILIENMITGLIED,
+  MEMBERSHIP_TYPE_HZD_FAMILIENMITGLIED,
+  MEMBERSHIP_TYPE_KURZZEITMITGLIED } from '../../../constants/membership-types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -196,11 +201,11 @@ export async function POST(request: NextRequest) {
     const b = formatDate(formData.kurzzeitBis) || '_________________';
 
     const memberships = [
-      { m_type: 'Vollmitglied', label: 'Ortsgruppenmitglied mit HZD Vollmitgliedschaft', price: '31,00 €', period: 'jährlich' },
-      { m_type: 'OG-Mitglied', label: 'Ortsgruppenmitglied', price: '138,00 €', period: 'jährlich' },
-      { m_type: 'Kurzzeitmitgliedschaft', label: `Kurzmitgliedschaft von: ${v} bis: ${b}`, price: '11,50 €', period: 'monatlich' },
-      { m_type: 'Familienmitgliedschaft', label: 'Ortsgruppenfamilienmitglied ohne HZD Familienmitgliedschaft', price: '16,00 €', period: 'jährlich' },
-      { m_type: 'HZD-Familienmitglied', label: 'Ortsgruppenfamilienmitglied mit HZD Familienmitgliedschaft', price: '16,00 €', period: 'jährlich' }
+      { m_type: MEMBERSHIP_TYPE_HZD_VOLLMITGLIED.id, label: 'Ortsgruppenmitglied mit HZD Vollmitgliedschaft', price: '31,00 €', period: 'jährlich' },
+      { m_type: MEMBERSHIP_TYPE_OG_MITGLIED.id, label: 'Ortsgruppenmitglied', price: '138,00 €', period: 'jährlich' },
+      { m_type: MEMBERSHIP_TYPE_KURZZEITMITGLIED.id, label: `Kurzmitgliedschaft von: ${v} bis: ${b}`, price: '11,50 €', period: 'monatlich' },
+      { m_type: MEMBERSHIP_TYPE_OG_FAMILIENMITGLIED.id, label: 'Ortsgruppenfamilienmitglied ohne HZD Familienmitgliedschaft', price: '16,00 €', period: 'jährlich' },
+      { m_type: MEMBERSHIP_TYPE_HZD_FAMILIENMITGLIED.id, label: 'Ortsgruppenfamilienmitglied mit HZD Familienmitgliedschaft', price: '16,00 €', period: 'jährlich' }
     ];
 
     memberships.forEach((membership, index) => {
