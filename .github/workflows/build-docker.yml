@@ -29,6 +29,6 @@ jobs:
         with:
           context: ./patched-dolibarr-image
           push: true
-          tags: yourdockerhubuser/dolibarr-custom:21.0.1
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/dolibarr-custom:21.0.1
           build-args: |
             BASE_TAG=21.0.1
