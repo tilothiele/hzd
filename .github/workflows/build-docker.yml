@@ -24,7 +24,7 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image dolibarr-custom
         uses: docker/build-push-action@v5
         with:
           context: ./patched-dolibarr-image
@@ -32,3 +32,12 @@ jobs:
           tags: ${{ vars.DOCKERHUB_USERNAME }}/dolibarr-custom:21.0.1
           build-args: |
             BASE_TAG=21.0.1
+
+      - name: Build and push Docker image antragsformular
+        uses: docker/build-push-action@v5
+        with:
+          context: ./antragsformular
+          push: true
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/hzd-antragsformular:latest
+
+
