@@ -163,6 +163,12 @@ if __name__ == '__main__':
     tx_total = 0.00
 
     n = 0
+    monat = datetime.datetime.now().month
+    beitrag_faktor = 1;
+    # prüfen, ob Monat zwischen Juli (7) und Dezember (12)
+    if 7 <= monat <= 12:
+        faktor = 0.5
+
     buchungstext = "HZD OG-Hamburg Mitgliedsbeitrag "+datetime.datetime.now().strftime("%Y")
     print("iban,betrag,kontoinhaber,mandat_vom,buchungstext,Mandatsreferenz")
     for p in dolibarr_liste_sorted:
@@ -185,7 +191,7 @@ if __name__ == '__main__':
             print(f"{name} hat kein Bankkonto")
             continue
         kontoinhaber = bank_account.proprio
-        b = typeid2Beitrag(p.typeid)
+        b = typeid2Beitrag(p.typeid) * faktor
         dr = datetime.datetime.fromtimestamp(bank_account.date_rum)
         bt = buchungstext+" "+p.type+" "+name
 

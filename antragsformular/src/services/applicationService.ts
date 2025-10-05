@@ -1,9 +1,10 @@
-import { getServerDatabaseService, generateServerUuid, serverLog } from '../lib/server-only';
+import { generateServerUuid, serverLog } from '../lib/server-only';
+import { DatabaseService } from '../lib/database-prisma';
 import { FormData } from '../types/formData';
 import { ApplicationSubmissionRequest, ApplicationSubmissionResponse } from '../types/api';
 
 class ApplicationService {
-  private db = getServerDatabaseService();
+  private db = new DatabaseService();
 
   /**
    * Speichert eine neue Antragsanmeldung in der Datenbank
@@ -12,11 +13,16 @@ class ApplicationService {
     try {
       const { formData, uuid } = request;
 
-      // Validierung
-      if (!formData.email || !formData.email.trim()) {
+      // Datenbank initialisieren
+      await this.db.initializeDatabase();
+
+      // Validierung der Formulardaten
+      const validationResult = this.validateFormData(formData);
+      if (!validationResult.isValid) {
         return {
           success: false,
-          message: 'E-Mail-Adresse ist erforderlich'
+          message: 'Validierungsfehler',
+          errors: validationResult.errors
         };
       }
 
@@ -49,7 +55,11 @@ class ApplicationService {
       const payload = JSON.stringify(formData);
 
       // In Datenbank speichern
-      await this.db.insertApplication(formData.email, uuid, payload);
+      await this.db.insertApplication({
+        email: formData.email,
+        uuid,
+        payload
+      });
 
       serverLog(`Neue Antragsanmeldung gespeichert: ${formData.email} (UUID: ${uuid})`);
 
@@ -75,7 +85,7 @@ class ApplicationService {
   async getApplicationByEmail(email: string): Promise<FormData | null> {
     try {
       const record = await this.db.getApplicationByEmail(email);
-      if (!record) {
+      if (!record || !record.payload) {
         return null;
       }
 
@@ -92,7 +102,7 @@ class ApplicationService {
   async getApplicationByUuid(uuid: string): Promise<FormData | null> {
     try {
       const record = await this.db.getApplicationByUuid(uuid);
-      if (!record) {
+      if (!record || !record.payload) {
         return null;
       }
 
@@ -109,7 +119,9 @@ class ApplicationService {
   async getAllApplications(limit: number = 100, offset: number = 0): Promise<FormData[]> {
     try {
       const records = await this.db.getAllApplications(limit, offset);
-      return records.map(record => JSON.parse(record.payload));
+      return records
+        .filter(record => record.payload)
+        .map(record => JSON.parse(record.payload!));
     } catch (error) {
       console.error('Fehler beim Abrufen aller Antragsanmeldungen:', error);
       return [];

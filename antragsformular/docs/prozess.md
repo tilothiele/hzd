@@ -80,3 +80,11 @@ Wenn der Button geklickt wird, passiert folgendes im Backend:
 
 1. Payload mit Antragsdaten wird gegen eine API gepostet - dort wird sie validiert. Wenn nicht valide, wird die Meldung angezeigt. Ansonsten...
 2. Es wird ein Panel mit den Buttons 'PDF laden' und 'schließen' angezeigt
+
+
+nachdem der benutzer auf weiter geklickt hat und das pdf erzeugt wurde. sollen folgende optionen berücksichtigt werden:
+Fall A: es gibt noch keinen datensazt mit der email-adresse
+Fall B: es gibt einen Datensatz mit der email-adresse. uuid ist null
+Fall C: es gibt einen Datensatz mit der email-adresse. uuid ist nicht null
+
+
