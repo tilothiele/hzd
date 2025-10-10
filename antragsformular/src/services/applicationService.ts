@@ -2,6 +2,8 @@ import { generateServerUuid, serverLog } from '../lib/server-only';
 import { DatabaseService } from '../lib/database-prisma';
 import { FormData } from '../types/formData';
 import { ApplicationSubmissionRequest, ApplicationSubmissionResponse } from '../types/api';
+import { getEmailService } from './emailService';
+import { getWorkflowService } from './workflowService';
 
 class ApplicationService {
   private db = new DatabaseService();
@@ -10,6 +12,7 @@ class ApplicationService {
    * Speichert eine neue Antragsanmeldung in der Datenbank
    */
   async submitApplication(request: ApplicationSubmissionRequest): Promise<ApplicationSubmissionResponse> {
+    console.log(process.env.DATABASE_URL);
     try {
       const { formData, uuid } = request;
 
@@ -34,12 +37,49 @@ class ApplicationService {
       }
 
       // Prüfe ob bereits eine Anwendung mit dieser E-Mail existiert
+      const noDdosCheck = process.env.DISABLE_DDOS_CHECK === 'true';
       const existingApplication = await this.db.getApplicationByEmail(formData.email);
-      if (existingApplication) {
-        return {
-          success: false,
-          message: 'Eine Anmeldung mit dieser E-Mail-Adresse existiert bereits'
-        };
+      if (existingApplication && !noDdosCheck) {
+        try {
+          // Verwende die bestehende UUID der Anmeldung als Verification Token
+          const existingUuid = existingApplication.uuid;
+
+          if (!existingUuid) {
+            return {
+              success: false,
+              message: 'Eine Anmeldung mit dieser E-Mail-Adresse existiert bereits'
+            };
+          }
+
+          // Aktualisiere den Zeitstempel für die gesendete Verifizierung
+          await this.db.updateVerificationSentAt(formData.email);
+
+          // Sende E-Mail mit Verification Link (verwendet die bestehende UUID)
+          const emailService = getEmailService();
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+          const emailSent = await emailService.sendVerificationEmail(
+            formData.email,
+            existingUuid,
+            baseUrl
+          );
+
+          if (!emailSent) {
+            serverLog(`Fehler beim Senden der Verifizierungs-E-Mail an ${formData.email}`);
+          } else {
+            serverLog(`Verifizierungs-E-Mail gesendet an ${formData.email}`);
+          }
+
+          return {
+            success: false,
+            message: 'Eine Anmeldung mit dieser E-Mail-Adresse existiert bereits. Wir haben Ihnen eine E-Mail mit einem Bestätigungslink gesendet.'
+          };
+        } catch (error) {
+          console.error('Fehler beim Senden der Verifizierungs-E-Mail:', error);
+          return {
+            success: false,
+            message: 'Eine Anmeldung mit dieser E-Mail-Adresse existiert bereits'
+          };
+        }
       }
 
       // Prüfe ob bereits eine Anwendung mit dieser UUID existiert
@@ -62,6 +102,16 @@ class ApplicationService {
       });
 
       serverLog(`Neue Antragsanmeldung gespeichert: ${formData.email} (UUID: ${uuid})`);
+
+      const workflowService = getWorkflowService();
+      const workflowResult = await workflowService.neuesMitglied(formData);
+
+      if(!workflowResult) {
+        return {
+          success: false,
+          message: 'Fehler beim Verarbeiten der Antragsanmeldung'
+        };
+      }
 
       return {
         success: true,

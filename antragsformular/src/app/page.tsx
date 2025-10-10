@@ -212,39 +212,18 @@ export default function AntragForm() {
     }
   };
 
-  const generateTestPDF = async (testData: FormData, testName: string) => {
-    console.log(`Generating PDF with test data: ${testName}`, testData);
-
-    try {
-      // Serverseitige PDF-Generierung mit Test-Daten
-      const response = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          formData: testData
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // PDF als Blob herunterladen
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `HZD-Test-${testName}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-    } catch (error) {
-      console.error('Fehler beim Generieren des Test-PDFs:', error);
-      alert('Fehler beim Generieren des Test-PDFs. Bitte versuchen Sie es erneut.');
+  const loadTestData = (testData: FormData, testName: string) => {
+    console.log(`Loading test data: ${testName}`, testData);
+    
+    // Setze die Testdaten ins Formular
+    setFormData(testData);
+    
+    // Optional: Zeige eine Benachrichtigung
+    setToast({ message: `Testdaten "${testName}" geladen`, type: 'success' });
+    
+    // Scroll zum Anfang des Formulars
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -318,8 +297,10 @@ export default function AntragForm() {
       if (result.success) {
         // Erfolgreiche Übermittlung
         setSavedFormData({ ...formDataMitKontoinhaber });
-        setShowSuccessDialog(true);
         setToast({ message: 'Antrag erfolgreich übermittelt!', type: 'success' });
+        
+        // Weiterleitung zur Bestätigungsseite
+        window.location.href = `/antrag-bestaetigung?email=${encodeURIComponent(formDataMitKontoinhaber.email)}`;
       } else {
         // Backend-Validierungsfehler anzeigen
         if (result.errors && Array.isArray(result.errors)) {
@@ -1075,21 +1056,21 @@ export default function AntragForm() {
             <div className="mt-4 flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 type="button"
-                onClick={() => generateTestPDF(testFormData, "Vollmitglied")}
+                onClick={() => loadTestData(testFormData, "Vollmitglied")}
                 className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
               >
                 Test1: Vollmitglied
               </button>
               <button
                 type="button"
-                onClick={() => generateTestPDF(testKurzzeitMitglied, "Kurzzeit")}
+                onClick={() => loadTestData(testKurzzeitMitglied, "Kurzzeit")}
                 className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
               >
                 Test2: Kurzzeit
               </button>
               <button
                 type="button"
-                onClick={() => generateTestPDF(testFamilienMitglied, "Familie")}
+                onClick={() => loadTestData(testFamilienMitglied, "Familie")}
                 className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
               >
                 Test3: Familie

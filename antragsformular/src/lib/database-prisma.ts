@@ -1,10 +1,19 @@
 import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
 
 // Singleton pattern for Prisma client
 let prisma: PrismaClient | null = null;
 
 export function getPrismaClient(): PrismaClient {
   if (!prisma) {
+    // Stelle sicher, dass das data-Verzeichnis existiert
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+      console.log('data-Verzeichnis erstellt:', dataDir);
+    }
+    
     prisma = new PrismaClient();
   }
   return prisma;
@@ -16,6 +25,7 @@ export interface ApplicationRecord {
   email: string;
   uuid: string | null;
   payload: string | null;
+  verificationSentAt: Date | null;
 }
 
 export class DatabaseService {
@@ -64,12 +74,13 @@ export class DatabaseService {
   }
 
   /**
-   * Ruft eine Antragsanmeldung anhand der E-Mail-Adresse ab
+   * Ruft die jüngste Antragsanmeldung anhand der E-Mail-Adresse ab
    */
   async getApplicationByEmail(email: string): Promise<ApplicationRecord | null> {
     try {
-      const record = await this.prisma.application.findUnique({
+      const record = await this.prisma.application.findFirst({
         where: { email },
+        orderBy: { creationDate: 'desc' },
       });
       return record;
     } catch (error) {
@@ -126,11 +137,11 @@ export class DatabaseService {
   }
 
   /**
-   * Löscht eine Antragsanmeldung anhand der E-Mail-Adresse
+   * Löscht alle Antragsanmeldungen mit der gegebenen E-Mail-Adresse
    */
   async deleteApplication(email: string): Promise<boolean> {
     try {
-      await this.prisma.application.delete({
+      await this.prisma.application.deleteMany({
         where: { email },
       });
       return true;
@@ -145,13 +156,41 @@ export class DatabaseService {
    */
   async applicationExists(email: string): Promise<boolean> {
     try {
-      const record = await this.prisma.application.findUnique({
+      const record = await this.prisma.application.findFirst({
         where: { email },
         select: { id: true },
       });
       return record !== null;
     } catch (error) {
       console.error('Fehler beim Prüfen der Antragsanmeldung:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Aktualisiert den Zeitstempel für gesendete Verifizierungs-E-Mail (jüngster Datensatz)
+   */
+  async updateVerificationSentAt(email: string): Promise<boolean> {
+    try {
+      // Finde den jüngsten Datensatz
+      const latest = await this.prisma.application.findFirst({
+        where: { email },
+        orderBy: { creationDate: 'desc' },
+        select: { id: true },
+      });
+      
+      if (!latest) {
+        return false;
+      }
+      
+      // Update über ID (unique)
+      await this.prisma.application.update({
+        where: { id: latest.id },
+        data: { verificationSentAt: new Date() },
+      });
+      return true;
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren von verificationSentAt:', error);
       return false;
     }
   }

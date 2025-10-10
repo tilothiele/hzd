@@ -11,11 +11,12 @@ datasource db {
 }
 
 model Application {
-  id           Int      @id @default(autoincrement())
-  creationDate DateTime @default(now())
-  email        String   @unique @map("email")
-  uuid         String?  @map("uuid")
-  payload      String?  @map("payload")
+  id                   Int       @id @default(autoincrement())
+  creationDate         DateTime  @default(now())
+  email                String    @map("email")
+  uuid                 String?   @map("uuid")
+  payload              String?   @map("payload")
+  verificationSentAt   DateTime? @map("verification_sent_at")
 
   @@map("applications")
 }
