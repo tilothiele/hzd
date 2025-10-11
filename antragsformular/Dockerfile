@@ -56,8 +56,7 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 RUN mkdir -p ./data && chown -R nextjs:nodejs ./data
 
 # Generate Prisma client and run migrations
-RUN npx prisma generate
-RUN npx prisma db push
+RUN npx prisma generate && npx prisma db push && chown -R nextjs:nodejs ./prisma
 
 USER nextjs
 
