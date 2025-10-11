@@ -116,6 +116,7 @@ class PdfService {
       pdf.setFont('helvetica', 'normal');
 
       const fields = [
+        { label: 'Anrede:', value: formData.anrede },
         { label: 'Name:', value: `${formData.vorname} ${formData.name}` },
         { label: 'Straße:', value: `${formData.strasse}` },
         { label: 'Ort:', value: `${formData.plz} ${formData.ort}` },

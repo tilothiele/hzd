@@ -79,8 +79,10 @@ class WorkflowService {
             throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
           }
 
-          const responseData = await response.text();
-          serverLog(`Workflow-Endpoint erfolgreich aufgerufen. Response: ${responseData}`);
+//          const responseData = await response.text();
+//          serverLog(`Workflow-Endpoint erfolgreich aufgerufen. Response: ${responseData}`);
+
+          serverLog(`Workflow-Endpoint erfolgreich aufgerufen.`);
 
         } catch (endpointError) {
           console.error('Fehler beim Aufruf des Workflow-Endpoints:', endpointError);

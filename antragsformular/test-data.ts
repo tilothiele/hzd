@@ -5,6 +5,7 @@ import { FormData } from './src/types/formData';
 
 // Standard Test-Daten (Vollmitglied)
 export const testFormData: FormData = {
+  anrede: "Herr",
   name: "Mustermann",
   vorname: "Max",
   geburtsdatum: "1985-06-15",
@@ -36,6 +37,7 @@ export const testFormData: FormData = {
 
 // Test-Szenario: Kurzzeitmitgliedschaft
 export const testKurzzeitMitglied: FormData = {
+  anrede: "Frau",
   name: "Schmidt",
   vorname: "Anna",
   geburtsdatum: "1990-04-22",
@@ -67,6 +69,7 @@ export const testKurzzeitMitglied: FormData = {
 
 // Test-Szenario: Familienmitgliedschaft
 export const testFamilienMitglied: FormData = {
+  anrede: "Frau",
   name: "Weber",
   vorname: "Maria",
   geburtsdatum: "1982-09-14",
@@ -98,6 +101,7 @@ export const testFamilienMitglied: FormData = {
 
 // Test-Szenario: Jugendmitgliedschaft mit Antragsteller als Kontoinhaber
 export const testJugendMitglied: FormData = {
+  anrede: "Herr",
   name: "Klein",
   vorname: "Peter",
   geburtsdatum: "1995-07-28",
@@ -150,8 +154,10 @@ export function generateRandomTestData(): FormData {
   const randomRasse = rassen[Math.floor(Math.random() * rassen.length)];
   const randomGeschlecht = geschlechter[Math.floor(Math.random() * geschlechter.length)];
   const randomMitgliedschaft = mitgliedschaften[Math.floor(Math.random() * mitgliedschaften.length)];
+  const randomAnrede = Math.random() > 0.5 ? "Herr" : "Frau";
   
   return {
+    anrede: randomAnrede,
     name: randomName,
     vorname: randomVorname,
     geburtsdatum: "1985-06-15",

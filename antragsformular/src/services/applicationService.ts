@@ -232,7 +232,7 @@ class ApplicationService {
 
     // Erforderliche Felder prüfen
     const requiredFields = [
-      'vorname', 'name', 'email', 'strasse', 'plz', 'ort',
+      'anrede', 'vorname', 'name', 'email', 'strasse', 'plz', 'ort',
       'hundName', 'mitgliedschaft', 'sepaIban', 'sepaBic', 'sepaKreditinstitut'
     ];
 
@@ -241,6 +241,11 @@ class ApplicationService {
       if (!value || !value.toString().trim()) {
         errors.push(`${field}:Feld ist erforderlich`);
       }
+    }
+
+    // Anrede muss Frau oder Herr sein
+    if (formData.anrede && formData.anrede !== 'Frau' && formData.anrede !== 'Herr') {
+      errors.push('anrede:Bitte wählen Sie Frau oder Herr');
     }
 
     // E-Mail-Format prüfen

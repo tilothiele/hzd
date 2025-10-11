@@ -19,6 +19,7 @@ export default function AntragForm() {
     }
   }, [requestId]);
   const [formData, setFormData] = useState<FormData>({
+    anrede: "",
     name: "",
     vorname: "",
     geburtsdatum: "",
@@ -72,11 +73,11 @@ export default function AntragForm() {
     // Validiere das Formular mit den aktualisierten Daten
     setTimeout(() => {
       const validationResult = validateFormWithData(updatedFormData);
-      console.log('Updated form data:', updatedFormData);
-      console.log('Validation result:', validationResult);
-      console.log('Form valid:', validationResult.isValid);
-      console.log('Error count:', Object.keys(validationResult.errors).length);
-      console.log('Errors:', validationResult.errors);
+//      console.log('Updated form data:', updatedFormData);
+//      console.log('Validation result:', validationResult);
+//      console.log('Form valid:', validationResult.isValid);
+//      console.log('Error count:', Object.keys(validationResult.errors).length);
+//      console.log('Errors:', validationResult.errors);
       setIsFormValid(validationResult.isValid);
     }, 100);
   };
@@ -214,13 +215,13 @@ export default function AntragForm() {
 
   const loadTestData = (testData: FormData, testName: string) => {
     console.log(`Loading test data: ${testName}`, testData);
-    
+
     // Setze die Testdaten ins Formular
     setFormData(testData);
-    
+
     // Optional: Zeige eine Benachrichtigung
     setToast({ message: `Testdaten "${testName}" geladen`, type: 'success' });
-    
+
     // Scroll zum Anfang des Formulars
     if (formRef.current) {
       formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -240,7 +241,7 @@ export default function AntragForm() {
       setTimeout(() => {
         // Scroll to first error in the correct order
         const errorFields = [
-          'vorname', 'name', 'geburtsdatum', 'strasse', 'plz', 'ort', 'telefon', 'email',
+          'anrede', 'vorname', 'name', 'geburtsdatum', 'strasse', 'plz', 'ort', 'telefon', 'email',
           'hundName', 'hundChip', 'hundWurfdatum', 'hundRasse', 'hundGeschlecht', 'hundVersicherung', 'hundVersNr',
           'sepaName', 'sepaKreditinstitut', 'sepaIban', 'sepaBic',
           'mitgliedschaft', 'kurzzeitVon', 'kurzzeitBis'
@@ -298,7 +299,7 @@ export default function AntragForm() {
         // Erfolgreiche Übermittlung
         setSavedFormData({ ...formDataMitKontoinhaber });
         setToast({ message: 'Antrag erfolgreich übermittelt!', type: 'success' });
-        
+
         // Weiterleitung zur Bestätigungsseite
         window.location.href = `/antrag-bestaetigung?email=${encodeURIComponent(formDataMitKontoinhaber.email)}`;
       } else {
@@ -364,6 +365,7 @@ export default function AntragForm() {
 
       // Reset form
       setFormData({
+        anrede: "",
         name: "",
         vorname: "",
         geburtsdatum: "",
@@ -468,6 +470,29 @@ export default function AntragForm() {
               </div>
 
               <div className="space-y-8">
+                {/* 0. Zeile: Anrede */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-gray-700">Anrede *</label>
+                    <select
+                      name="anrede"
+                      value={formData.anrede}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
+                        errors.anrede ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      data-error={!!errors.anrede}
+                    >
+                      <option value="">Bitte wählen</option>
+                      <option value="Frau">Frau</option>
+                      <option value="Herr">Herr</option>
+                    </select>
+                    {errors.anrede && (
+                      <p className="text-sm text-red-600 mt-1">{errors.anrede}</p>
+                    )}
+                  </div>
+                </div>
+
                 {/* 1. Zeile: Vorname, Nachname, Geburtsdatum */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-3">
@@ -826,59 +851,44 @@ export default function AntragForm() {
                           {membershipType.description}
                         </p>
                       )}
+                      {membershipType.requiresDateRange && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                      <div className="space-y-1">
+                        <label className="block text-xs text-gray-600">Von (Jahr/Monat)</label>
+                        <input
+                          type="month"
+                          name="kurzzeitVon"
+                          onChange={handleChange}
+                          className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-transparent ${
+                            errors.kurzzeitVon ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          data-error={!!errors.kurzzeitVon}
+                        />
+                        {errors.kurzzeitVon && (
+                          <p className="text-xs text-red-600 mt-1">{errors.kurzzeitVon}</p>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-xs text-gray-600">Bis (Jahr/Monat)</label>
+                        <input
+                          type="month"
+                          name="kurzzeitBis"
+                          onChange={handleChange}
+                          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                            errors.kurzzeitBis ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          data-error={!!errors.kurzzeitBis}
+                        />
+                        {errors.kurzzeitBis && (
+                          <p className="text-xs text-red-600 mt-1">{errors.kurzzeitBis}</p>
+                        )}
+                      </div>
+                    </div>
+                    )}
                     </div>
                   </div>
                 ))}
 
-
-
-                <div className="p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="radio"
-                      name="mitgliedschaft"
-                      value="Kurzzeitmitglied"
-                      onChange={handleChange}
-                      className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                    />
-                    <div className="flex-1">
-                      <label className="text-sm font-medium text-gray-900">Kurzzeitmitglied</label>
-                      <p className="text-sm text-gray-600">11,50 € pro Monat</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                        <div className="space-y-1">
-                          <label className="block text-xs text-gray-600">Von (Jahr/Monat)</label>
-                          <input
-                            type="month"
-                            name="kurzzeitVon"
-                            onChange={handleChange}
-                            className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-transparent ${
-                              errors.kurzzeitVon ? 'border-red-500' : 'border-gray-300'
-                            }`}
-                            data-error={!!errors.kurzzeitVon}
-                          />
-                          {errors.kurzzeitVon && (
-                            <p className="text-xs text-red-600 mt-1">{errors.kurzzeitVon}</p>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <label className="block text-xs text-gray-600">Bis (Jahr/Monat)</label>
-                          <input
-                            type="month"
-                            name="kurzzeitBis"
-                            onChange={handleChange}
-                            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                              errors.kurzzeitBis ? 'border-red-500' : 'border-gray-300'
-                            }`}
-                            data-error={!!errors.kurzzeitBis}
-                          />
-                          {errors.kurzzeitBis && (
-                            <p className="text-xs text-red-600 mt-1">{errors.kurzzeitBis}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 

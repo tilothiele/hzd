@@ -2,6 +2,7 @@
 // Diese Datei kann im Frontend und Backend verwendet werden
 
 export interface FormData {
+  anrede: string;
   name: string;
   vorname: string;
   geburtsdatum: string;
