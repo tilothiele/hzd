@@ -248,6 +248,11 @@ class ApplicationService {
       errors.push('anrede:Bitte wählen Sie Frau oder Herr');
     }
 
+    // Mitgliedschaft muss ausgewählt sein
+    if (!formData.mitgliedschaft || formData.mitgliedschaft.trim() === '') {
+      errors.push('mitgliedschaft:Bitte wählen Sie eine Mitgliedschaft');
+    }
+
     // E-Mail-Format prüfen
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.push('email:Ungültige E-Mail-Adresse');
