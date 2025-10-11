@@ -21,7 +21,7 @@ export const testFormData: FormData = {
   hundChip: "123456789012345",
   hundWurfdatum: "2022-03-15",
   hundRasse: "Hovawart",
-  hundGeschlecht: "weiblich",
+  hundGeschlecht: "Hündin",
   hundVersicherung: "Allianz",
   hundVersNr: "VERS-789456",
   kontoinhaber: "Max Mustermann",
@@ -53,7 +53,7 @@ export const testKurzzeitMitglied: FormData = {
   hundChip: "987654321098765",
   hundWurfdatum: "2021-08-10",
   hundRasse: "Hovawart",
-  hundGeschlecht: "weiblich",
+  hundGeschlecht: "Hündin",
   hundVersicherung: "HUK-Coburg",
   hundVersNr: "HUK-456789",
   kontoinhaber: "Anna Schmidt",
@@ -85,7 +85,7 @@ export const testFamilienMitglied: FormData = {
   hundChip: "555666777888999",
   hundWurfdatum: "2020-11-05",
   hundRasse: "Hovawart",
-  hundGeschlecht: "männlich",
+  hundGeschlecht: "Rüde",
   hundVersicherung: "Allianz",
   hundVersNr: "ALL-789012",
   kontoinhaber: "Maria Weber",
@@ -117,7 +117,7 @@ export const testJugendMitglied: FormData = {
   hundChip: "999888777666555",
   hundWurfdatum: "2022-05-12",
   hundRasse: "Hovawart",
-  hundGeschlecht: "weiblich",
+  hundGeschlecht: "Hündin",
   hundVersicherung: "HUK-Coburg",
   hundVersNr: "HUK-246810",
   kontoinhaber: "Peter Klein",
@@ -145,7 +145,7 @@ export function generateRandomTestData(): FormData {
   const vornamen = ["Max", "Anna", "Thomas", "Maria", "Peter", "Lisa", "Michael", "Sarah"];
   const hundeNamen = ["Bella", "Luna", "Rex", "Bruno", "Asta", "Max", "Luna", "Rex"];
   const rassen = ["Hovawart", "Deutscher Schäferhund", "Labrador", "Golden Retriever"];
-  const geschlechter = ["männlich", "weiblich"];
+  const geschlechter = ["Rüde", "Hündin"];
   const mitgliedschaften = ["HZD Vollmitgliedschaft", "Kurzzeitmitglied", "OG Familienmitglied", "HZD Familienmitglied"];
   
   const randomName = names[Math.floor(Math.random() * names.length)];

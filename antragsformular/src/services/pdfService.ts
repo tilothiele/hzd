@@ -161,15 +161,7 @@ class PdfService {
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
 
-      let hundGeschlecht = '';
-      if (formData.hundGeschlecht === 'männlich') {
-        hundGeschlecht = 'Rüde';
-      }
-      if (formData.hundGeschlecht === 'weiblich') {
-        hundGeschlecht = 'Hündin';
-      }
-
-      // Hund-Felder
+      // Hund-Felder (Geschlecht wird direkt verwendet, da es bereits "Rüde" oder "Hündin" ist)
       const hundFields = [
         { label: 'Name:', value: formData.hundName },
         { label: 'Zwingername:', value: formData.hundZwinger },
@@ -178,7 +170,7 @@ class PdfService {
         { label: 'Rasse:', value: formData.hundRasse },
         { label: 'Haftpflichtversicherung:', value: formData.hundVersicherung },
         { label: 'Nr.:', value: formData.hundVersNr },
-        { label: 'Geschlect:', value: hundGeschlecht },
+        { label: 'Geschlect:', value: formData.hundGeschlecht },
         { label: 'Chipnr.:', value: formData.hundChip }
       ];
 
