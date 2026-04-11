@@ -1,4 +1,18 @@
 
+## Aufrufe
+
+```
+python -m venv venv
+pip install -r ./requirements.txt
+
+# anschließend nur noch
+source venv/bin/activate
+
+```
+
+
+## scratch
+
 curl https://hzd-og-hh-test.swingdog.home64.de/api/index.php/members \
   -H 'DOLAPIKEY: b0i2xHD4eeSjdQ2nRf03N1QaLQX3He74' \
   -H 'Accept: application/json'

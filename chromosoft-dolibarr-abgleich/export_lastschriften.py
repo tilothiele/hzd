@@ -1,5 +1,6 @@
 from models.dolibarr_member import DolibarrMember,mussZahlen
 from models.dolibarr_actions import find_by_soc, find_all, per_lastschrift, create_subscription, get_subscriptions
+import argparse
 import datetime
 import uuid
 import os
@@ -12,6 +13,7 @@ from dotenv import load_dotenv
 # Schreibt auf stdout die Lastschriftdatensätze als csv
 # Erstellt eine Lastschrift-XML (SEPA)
 # Verlängert die Mitgliedschaft -> Erstellt einen neuen Eintrag mit dem Betrag und vom 1.1. bis 31.12.
+# Mit --no-renewal bleibt dieser Schritt aus.
 # -----------------------------------------------------------------
 
 def dolibarrKey(m: DolibarrMember):
@@ -51,6 +53,15 @@ def dolibarrKey(m: DolibarrMember):
     return m.firstname + " " + m.lastname
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Lastschriften exportieren und optional Mitgliedschaft verlängern'
+    )
+    parser.add_argument(
+        '--no-renewal',
+        action='store_true',
+        help='Keine Verlängerung der Mitgliedschaft in Dolibarr (nur SEPA/CSV)',
+    )
+    args = parser.parse_args()
 
     dolibarr_liste = find_all()
     dolibarr_liste_sorted = sorted(dolibarr_liste, key=lambda p: (p.lastname.lower(), p.firstname.lower()))
@@ -60,7 +71,7 @@ if __name__ == '__main__':
     # .env-Datei laden
     load_dotenv()
 
-    API_KEY = os.getenv('API_KEY')
+    API_KEY = os.getenv('DOLIBARR_API_KEY')
 
     # Creditor-Informationen
     CREDITOR_NAME = os.getenv('CREDITOR_NAME')
@@ -164,7 +175,7 @@ if __name__ == '__main__':
 
     n = 0
     monat = datetime.datetime.now().month
-    beitrag_faktor = 1;
+    faktor = 1;
     # prüfen, ob Monat zwischen Juli (7) und Dezember (12)
     if 7 <= monat <= 12:
         faktor = 0.5
@@ -234,7 +245,8 @@ if __name__ == '__main__':
             print("gekürzt "+bt1)
         ET.SubElement(rmt_inf, "Ustrd").text = bt1
 
-        create_subscription(p, b, datetime.datetime.now().year)
+        if not args.no_renewal:
+            create_subscription(p, b, datetime.datetime.now().year)
 
     # Gruppensummen nachtragen
     grp_hdr.find("NbOfTxs").text = str(tx_count)

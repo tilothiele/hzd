@@ -4,10 +4,9 @@ import os
 import json
 from dotenv import load_dotenv
 
-# .env-Datei laden
 load_dotenv()
 
-API_KEY = os.getenv('API_KEY')
+API_KEY = os.getenv('DOLIBARR_API_KEY')
 DOLIBARR_HOST = os.getenv('DOLIBARR_HOST')
 BASE_URL = f'{DOLIBARR_HOST}/api/index.php/members'
 HEADERS = {
@@ -84,5 +83,6 @@ def write_to_csv(data, filename='dolibarr-export.csv'):
 
 if __name__ == "__main__":
     members = fetch_all_members()
-    write_to_csv(members)
-    print(f"{len(members)} Mitglieder in members.csv gespeichert.")
+    fn = "members-20260411.csv"
+    write_to_csv(members, fn)
+    print(f"{len(members)} Mitglieder in {fn} gespeichert.")

@@ -5,3 +5,4 @@
 *.ods
 *.xml
 **/__pycache__/
+/venv/
