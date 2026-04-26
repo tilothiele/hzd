@@ -4,5 +4,6 @@
 *.xlsx
 *.ods
 *.xml
+*.XML
 **/__pycache__/
 /venv/
