@@ -1,3 +1,26 @@
+## Mitgliedsbeiträge einziehen
+
+```
+source venv/bin/activate
+# Die connectivity-Datn in der Datei .env eintragen
+
+python export_lastschriften.py --no-renewal
+
+# wenn okay, dann ohne --no-renewal
+python export_lastschriften.py
+
+# anschließend die Datei sepa-lastschriften.xml an jan-philipp.
+```
+
+## Wichtiger Patch in Dolibarr
+
+in api_thirdparties.class.php methode getCompanyBankAccount müssen die Felder 'proprio', 'date_rum' in der whitelist ergänzt werden:
+
+```
+		$fields = array('socid', 'default_rib', 'frstrecur', '1000110000001', 'datec', 'datem', 'label', 'bank', 'bic', 'iban', 'id', 'rum', 'date_rum', 'proprio', 'owner_address');
+```
+
+-> ist bereits in meinem dolibarr patch enthalten.
 
 ## Aufrufe
 

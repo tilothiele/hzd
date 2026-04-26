@@ -4,6 +4,7 @@ import argparse
 import datetime
 import uuid
 import os
+import sys
 import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
 
@@ -201,12 +202,16 @@ if __name__ == '__main__':
         if bank_account == None:
             print(f"{name} hat kein Bankkonto")
             continue
-        kontoinhaber = bank_account.proprio
+        kontoinhaber = bank_account.proprio if bank_account.proprio else ""
+        kontoinhaber = kontoinhaber.strip()
+        if not kontoinhaber:
+            sys.exit(f"Fehler bei Mitglied {name}: Kontoinhaber fehlt (IBAN: {bank_account.iban}). Abbruch.")
+            
         b = typeid2Beitrag(p.typeid) * faktor
         dr = datetime.datetime.fromtimestamp(bank_account.date_rum)
         bt = buchungstext+" "+p.type+" "+name
 
-        print(f"Ziehe {b} Euro für {name} vom Konto {bank_account.iban} ({bank_account.proprio}) ein.")
+        print(f"Ziehe {b} Euro für {name} vom Konto {bank_account.iban} ({kontoinhaber}) ein.")
         #print(bank_account.iban+","+str(b)+","+bank_account.proprio+","+dr.strftime("%d.%m.%Y")+","+bt+","+bank_account.rum)
 
         amount = float(b)
@@ -233,7 +238,7 @@ if __name__ == '__main__':
         ET.SubElement(othr, "Id").text = "NOTPROVIDED"
 
         dbtr = ET.SubElement(drct_dbt_tx_inf, "Dbtr")
-        ET.SubElement(dbtr, "Nm").text = bank_account.proprio
+        ET.SubElement(dbtr, "Nm").text = kontoinhaber
 
         dbtr_acct = ET.SubElement(drct_dbt_tx_inf, "DbtrAcct")
         id_acct = ET.SubElement(dbtr_acct, "Id")

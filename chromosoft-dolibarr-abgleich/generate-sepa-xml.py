@@ -1,6 +1,7 @@
 import csv
 import uuid
 import os
+import sys
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
@@ -131,7 +132,10 @@ with open(csv_file, newline='', encoding="utf-8") as csvfile:
         ET.SubElement(othr, "Id").text = "NOTPROVIDED"
 
         dbtr = ET.SubElement(drct_dbt_tx_inf, "Dbtr")
-        ET.SubElement(dbtr, "Nm").text = row["kontoinhaber"]
+        kontoinhaber = row.get("kontoinhaber", "").strip()
+        if not kontoinhaber:
+            sys.exit(f"Fehler in Datensatz {n}: Kontoinhaber fehlt (Mandatsreferenz: {row.get('Mandatsreferenz', '')}, IBAN: {row.get('iban', '')}). Abbruch.")
+        ET.SubElement(dbtr, "Nm").text = kontoinhaber
 
         dbtr_acct = ET.SubElement(drct_dbt_tx_inf, "DbtrAcct")
         id_acct = ET.SubElement(dbtr_acct, "Id")
